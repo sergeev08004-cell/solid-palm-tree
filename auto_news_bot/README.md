@@ -127,6 +127,13 @@ python3 main.py --config config.sample.local.json --once --dry-run --verbose
 
 В текущем шаблоне это настраивается через блок `translation` и список `sources`.
 
+Сейчас базовый поток уже можно держать сбалансированным по регионам:
+
+- СНГ и русскоязычная повестка: `Drom`, `Motor.ru`;
+- Европа: `Autocar`, `BMW Group`;
+- глобальные англоязычные авто-СМИ: `Motor1`, `InsideEVs`, `Motor Authority`, `The Car Connection`, `Green Car Reports`;
+- официальные newsroom-источники брендов: `BMW Group`, `Hyundai`.
+
 ## Как сделать ленту разнообразнее
 
 В конфиг добавлен блок `diversity`:
@@ -171,21 +178,25 @@ python3 main.py --config config.json --once --dry-run
 
 Из подтвержденных официальных англоязычных авто-RSS можно добавить:
 
+- Motor.ru RSS: [https://motor.ru/exports/rss](https://motor.ru/exports/rss)
 - Motor1 RSS: [https://www.motor1.com/rss/](https://www.motor1.com/rss/)
 - Motor Authority RSS: [https://www.motorauthority.com/rss-feeds](https://www.motorauthority.com/rss-feeds)
 - InsideEVs RSS: [https://insideevs.com/rss/](https://insideevs.com/rss/)
 - The Car Connection RSS: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
 - Green Car Reports RSS: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)
+- Autocar RSS: [https://www.autocar.co.uk/rss](https://www.autocar.co.uk/rss)
 - BMW Group PressClub RSS: [https://www.press.bmwgroup.com/global/info/rss](https://www.press.bmwgroup.com/global/info/rss)
 - Hyundai Newsroom RSS: [https://www.hyundai.com/worldwide/en/newsroom](https://www.hyundai.com/worldwide/en/newsroom)
 
 Источники проверены по их официальным страницам RSS:
 
 - Drom.ru export page: [https://www.drom.ru/export/](https://www.drom.ru/export/)
+- Motor.ru main page with RSS link in footer: [https://motor.ru/](https://motor.ru/)
 - Motor1 RSS page: [https://www.motor1.com/rss/](https://www.motor1.com/rss/)
 - Motor Authority RSS page: [https://www.motorauthority.com/rss-feeds](https://www.motorauthority.com/rss-feeds)
 - InsideEVs RSS page: [https://insideevs.com/rss/](https://insideevs.com/rss/)
 - The Car Connection RSS page: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
 - Green Car Reports RSS page: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)
+- Autocar RSS feed: [https://www.autocar.co.uk/rss](https://www.autocar.co.uk/rss)
 - BMW Group RSS page: [https://www.press.bmwgroup.com/global/info/rss](https://www.press.bmwgroup.com/global/info/rss)
 - Hyundai Newsroom RSS page: [https://www.hyundai.com/worldwide/en/newsroom](https://www.hyundai.com/worldwide/en/newsroom)

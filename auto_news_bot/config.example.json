@@ -42,6 +42,14 @@
       "enabled": true
     },
     {
+      "name": "Motor.ru",
+      "url": "https://motor.ru/exports/rss",
+      "language": "ru",
+      "group": "motorru",
+      "weight": 1.0,
+      "enabled": true
+    },
+    {
       "name": "Motor1",
       "url": "https://www.motor1.com/rss/news/all/",
       "language": "en",
@@ -78,6 +86,14 @@
       "url": "https://feeds.highgearmedia.com/?sites=GreenCarReports&tags=news",
       "language": "en",
       "group": "greencarreports",
+      "weight": 0.9,
+      "enabled": true
+    },
+    {
+      "name": "Autocar",
+      "url": "https://www.autocar.co.uk/rss",
+      "language": "en",
+      "group": "autocar",
       "weight": 0.9,
       "enabled": true
     },

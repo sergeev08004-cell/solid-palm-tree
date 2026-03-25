@@ -110,6 +110,7 @@ BRAND_TAGS = (
     ("stellantis", "Stellantis")
 )
 SOURCE_TAGS = {
+    "autocar": "Autocar",
     "insideevs": "InsideEVs",
     "motorauthority": "MotorAuthority",
     "thecarconnection": "TheCarConnection",
@@ -117,7 +118,8 @@ SOURCE_TAGS = {
     "autoevolution": "Autoevolution",
     "bmwgroup": "BMW",
     "hyundai": "Hyundai",
-    "drom": "Drom"
+    "drom": "Drom",
+    "motorru": "MotorRu"
 }
 
 
