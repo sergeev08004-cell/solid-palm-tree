@@ -163,9 +163,15 @@ python3 main.py --config config.json --once --dry-run
 
 - Motor1 RSS: [https://www.motor1.com/rss/](https://www.motor1.com/rss/)
 - Motor Authority RSS: [https://www.motorauthority.com/rss-feeds](https://www.motorauthority.com/rss-feeds)
+- InsideEVs RSS: [https://insideevs.com/rss/](https://insideevs.com/rss/)
+- The Car Connection RSS: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
+- Green Car Reports RSS: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)
 
 Источники проверены по их официальным страницам RSS:
 
 - Drom.ru export page: [https://www.drom.ru/export/](https://www.drom.ru/export/)
 - Motor1 RSS page: [https://www.motor1.com/rss/](https://www.motor1.com/rss/)
 - Motor Authority RSS page: [https://www.motorauthority.com/rss-feeds](https://www.motorauthority.com/rss-feeds)
+- InsideEVs RSS page: [https://insideevs.com/rss/](https://insideevs.com/rss/)
+- The Car Connection RSS page: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
+- Green Car Reports RSS page: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)

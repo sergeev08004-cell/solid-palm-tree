@@ -49,6 +49,38 @@
       "enabled": true
     },
     {
+      "name": "InsideEVs",
+      "url": "https://insideevs.com/rss/news/all/",
+      "language": "en",
+      "group": "insideevs",
+      "weight": 1.05,
+      "enabled": true
+    },
+    {
+      "name": "Motor Authority News",
+      "url": "https://feeds.highgearmedia.com/?sites=MotorAuthority&tags=news",
+      "language": "en",
+      "group": "motorauthority",
+      "weight": 0.95,
+      "enabled": true
+    },
+    {
+      "name": "The Car Connection News",
+      "url": "https://feeds.highgearmedia.com/?sites=TheCarConnection&type=blog",
+      "language": "en",
+      "group": "thecarconnection",
+      "weight": 0.9,
+      "enabled": true
+    },
+    {
+      "name": "Green Car Reports News",
+      "url": "https://feeds.highgearmedia.com/?sites=GreenCarReports&tags=news",
+      "language": "en",
+      "group": "greencarreports",
+      "weight": 0.9,
+      "enabled": true
+    },
+    {
       "name": "autoevolution Industry",
       "url": "https://www.autoevolution.com/rss/backend-industry.xml",
       "language": "en",
@@ -111,6 +143,9 @@
     "opinion",
     "editorial",
     "podcast",
+    "tips",
+    "tips and advice",
+    "advice",
     "sponsored",
     "list",
     "lists",
@@ -121,6 +156,8 @@
     "rendering",
     "renderings",
     "teaser",
+    "buying guide",
+    "buying guides",
     "motorcycle",
     "motorcycles",
     "bike",
