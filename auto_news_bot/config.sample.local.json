@@ -21,24 +21,35 @@
       "en"
     ]
   },
+  "diversity": {
+    "enabled": true,
+    "max_per_publisher": 1,
+    "max_per_topic": 2,
+    "topic_repeat_penalty": 1.15,
+    "publisher_repeat_penalty": 0.85,
+    "topic_limits": {
+      "recalls": 1
+    }
+  },
   "sources": [
     {
       "name": "SampleFeed",
       "url": "file:///Users/sergejsergeev/Documents/Playground/auto_news_bot/examples/sample_feed.xml",
       "language": "ru",
+      "group": "sample",
       "weight": 1.0,
       "enabled": true
     }
   ],
   "priority_topics": [
-    "recalls",
-    "law",
     "new_models",
+    "law",
     "prices",
-    "sales",
     "production",
     "electric",
-    "technology"
+    "technology",
+    "sales",
+    "recalls"
   ],
   "blocked_keywords": [
     "тест-драйв",

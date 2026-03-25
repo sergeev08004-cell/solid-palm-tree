@@ -21,11 +21,22 @@
       "en"
     ]
   },
+  "diversity": {
+    "enabled": true,
+    "max_per_publisher": 1,
+    "max_per_topic": 2,
+    "topic_repeat_penalty": 1.15,
+    "publisher_repeat_penalty": 0.85,
+    "topic_limits": {
+      "recalls": 1
+    }
+  },
   "sources": [
     {
       "name": "Drom",
       "url": "https://www.drom.ru/export/xml/news.rss",
       "language": "ru",
+      "group": "drom",
       "weight": 1.0,
       "enabled": true
     },
@@ -33,6 +44,7 @@
       "name": "Motor1",
       "url": "https://www.motor1.com/rss/news/all/",
       "language": "en",
+      "group": "motor1",
       "weight": 1.15,
       "enabled": true
     },
@@ -40,6 +52,7 @@
       "name": "autoevolution Industry",
       "url": "https://www.autoevolution.com/rss/backend-industry.xml",
       "language": "en",
+      "group": "autoevolution",
       "weight": 1.0,
       "enabled": true
     },
@@ -47,6 +60,7 @@
       "name": "autoevolution Recalls",
       "url": "https://www.autoevolution.com/rss/backend-recalls.xml",
       "language": "en",
+      "group": "autoevolution",
       "weight": 1.1,
       "enabled": true
     },
@@ -54,6 +68,7 @@
       "name": "autoevolution Technology",
       "url": "https://www.autoevolution.com/rss/backend-technology.xml",
       "language": "en",
+      "group": "autoevolution",
       "weight": 0.95,
       "enabled": true
     },
@@ -61,19 +76,20 @@
       "name": "autoevolution Green",
       "url": "https://www.autoevolution.com/rss/backend-green.xml",
       "language": "en",
+      "group": "autoevolution",
       "weight": 0.95,
       "enabled": true
     }
   ],
   "priority_topics": [
-    "recalls",
-    "law",
     "new_models",
+    "law",
     "prices",
-    "sales",
     "production",
     "electric",
-    "technology"
+    "technology",
+    "sales",
+    "recalls"
   ],
   "blocked_keywords": [
     "тест-драйв",

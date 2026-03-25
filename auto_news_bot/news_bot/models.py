@@ -8,6 +8,7 @@ from typing import List
 @dataclass(frozen=True)
 class CandidateItem:
     source_name: str
+    source_group: str
     source_language: str
     source_weight: float
     title: str

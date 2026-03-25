@@ -22,6 +22,7 @@ MEDIA_NAMESPACE = "http://search.yahoo.com/mrss/"
 @dataclass(frozen=True)
 class FeedEntry:
     source_name: str
+    source_group: str
     source_language: str
     source_weight: float
     title: str
@@ -80,6 +81,7 @@ def _parse_rss(root: ET.Element, source: SourceConfig) -> List[FeedEntry]:
         items.append(
             FeedEntry(
                 source_name=source.name,
+                source_group=source.group,
                 source_language=source.language,
                 source_weight=source.weight,
                 title=title,
@@ -130,6 +132,7 @@ def _parse_atom(root: ET.Element, source: SourceConfig) -> List[FeedEntry]:
         items.append(
             FeedEntry(
                 source_name=source.name,
+                source_group=source.group,
                 source_language=source.language,
                 source_weight=source.weight,
                 title=title,

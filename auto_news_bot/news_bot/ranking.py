@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections import Counter
 import math
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING, List, Tuple
 
+from news_bot.config import DiversityConfig
 from news_bot.models import CandidateItem
 from news_bot.storage import Storage
 from news_bot.text_tools import normalize_url
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
 TOPIC_RULES = {
     "recalls": {
         "label": "Отзывная кампания",
-        "weight": 3.8,
+        "weight": 2.6,
         "keywords": ["отзыв", "recall", "service action", "дефект", "неисправн", "кампания"]
     },
     "law": {
@@ -63,7 +65,9 @@ def rank_candidates(
     storage: Storage,
     priority_topics: List[str],
     max_age_hours: int,
-    min_age_minutes: int
+    min_age_minutes: int,
+    max_items: int,
+    diversity: DiversityConfig
 ) -> List[CandidateItem]:
     now = datetime.now(timezone.utc)
     fresh_after = now - timedelta(hours=max_age_hours)
@@ -76,7 +80,7 @@ def rank_candidates(
     ]
 
     deduplicated = deduplicate(filtered)
-    ranked = []
+    ranked: List[CandidateItem] = []
     topic_bonus = {topic: (len(priority_topics) - index) * 0.25 for index, topic in enumerate(priority_topics)}
 
     for group in deduplicated:
@@ -90,6 +94,7 @@ def rank_candidates(
         ranked.append(
             CandidateItem(
                 source_name=best.source_name,
+                source_group=best.source_group,
                 source_language=best.source_language,
                 source_weight=best.source_weight,
                 title=best.title,
@@ -107,7 +112,13 @@ def rank_candidates(
         )
 
     ranked.sort(key=lambda item: (item.score, item.published_at), reverse=True)
-    return ranked
+    if max_items <= 0:
+        return []
+
+    if not diversity.enabled:
+        return ranked[:max_items]
+
+    return diversify_candidates(ranked, diversity, max_items)
 
 
 def deduplicate(items: List[CollectedItem]) -> List[List[CollectedItem]]:
@@ -145,3 +156,58 @@ def detect_topic(text: str) -> Tuple[str, str, float]:
             return topic, rule["label"], float(rule["weight"])
 
     return DEFAULT_TOPIC
+
+
+def diversify_candidates(
+    ranked: List[CandidateItem],
+    diversity: DiversityConfig,
+    max_items: int
+) -> List[CandidateItem]:
+    selected: List[CandidateItem] = []
+    remaining = list(ranked)
+    publisher_counts: Counter[str] = Counter()
+    topic_counts: Counter[str] = Counter()
+
+    while remaining and len(selected) < max_items:
+        strict_pool = [
+            item for item in remaining
+            if topic_counts[item.topic] < diversity.topic_limits.get(item.topic, max_items)
+        ]
+        if not strict_pool:
+            break
+
+        candidate_pool = strict_pool
+        preferred_pool = [
+            item for item in candidate_pool
+            if publisher_counts[item.source_group] < diversity.max_per_publisher
+            and topic_counts[item.topic] < diversity.max_per_topic
+        ]
+        candidate_pool = preferred_pool or candidate_pool
+
+        chosen = max(
+            candidate_pool,
+            key=lambda item: (
+                adjusted_score(item, publisher_counts, topic_counts, diversity),
+                item.score,
+                item.published_at_utc
+            )
+        )
+        selected.append(chosen)
+        remaining.remove(chosen)
+        publisher_counts[chosen.source_group] += 1
+        topic_counts[chosen.topic] += 1
+
+    return selected
+
+
+def adjusted_score(
+    item: CandidateItem,
+    publisher_counts: Counter[str],
+    topic_counts: Counter[str],
+    diversity: DiversityConfig
+) -> float:
+    return (
+        item.score
+        - (publisher_counts[item.source_group] * diversity.publisher_repeat_penalty)
+        - (topic_counts[item.topic] * diversity.topic_repeat_penalty)
+    )

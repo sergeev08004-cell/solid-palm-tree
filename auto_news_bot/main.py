@@ -34,7 +34,9 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
         storage=storage,
         priority_topics=config.priority_topics,
         max_age_hours=config.max_post_age_hours,
-        min_age_minutes=config.min_post_age_minutes
+        min_age_minutes=config.min_post_age_minutes,
+        max_items=config.max_posts_per_cycle,
+        diversity=config.diversity
     )
 
     if verbose:

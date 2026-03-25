@@ -13,6 +13,7 @@ from news_bot.text_tools import fingerprint_from_text, normalize_url, title_key,
 @dataclass(frozen=True)
 class CollectedItem:
     source_name: str
+    source_group: str
     source_language: str
     source_weight: float
     title: str
@@ -58,6 +59,7 @@ def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = Fals
             collected.append(
                 CollectedItem(
                     source_name=entry.source_name,
+                    source_group=entry.source_group,
                     source_language=entry.source_language,
                     source_weight=entry.source_weight,
                     title=entry.title,

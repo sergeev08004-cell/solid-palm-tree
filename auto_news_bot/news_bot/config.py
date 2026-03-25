@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import Dict, List
+from urllib.parse import urlparse
 
 
 @dataclass(frozen=True)
@@ -12,6 +14,7 @@ class SourceConfig:
     url: str
     language: str
     weight: float
+    group: str
     enabled: bool = True
 
 
@@ -31,6 +34,16 @@ class TranslationConfig:
 
 
 @dataclass(frozen=True)
+class DiversityConfig:
+    enabled: bool
+    max_per_publisher: int
+    max_per_topic: int
+    topic_repeat_penalty: float
+    publisher_repeat_penalty: float
+    topic_limits: Dict[str, int]
+
+
+@dataclass(frozen=True)
 class AppConfig:
     telegram: TelegramConfig
     poll_interval_minutes: int
@@ -46,6 +59,7 @@ class AppConfig:
     priority_topics: List[str]
     blocked_keywords: List[str]
     translation: TranslationConfig
+    diversity: DiversityConfig
 
 
 def load_config(path: Path) -> AppConfig:
@@ -68,6 +82,18 @@ def load_config(path: Path) -> AppConfig:
         target_language=str(translation_payload.get("target_language", "ru")),
         source_languages=[str(item).lower() for item in translation_payload.get("source_languages", ["en"])]
     )
+    diversity_payload = payload.get("diversity", {})
+    diversity = DiversityConfig(
+        enabled=bool(diversity_payload.get("enabled", True)),
+        max_per_publisher=max(1, int(diversity_payload.get("max_per_publisher", 1))),
+        max_per_topic=max(1, int(diversity_payload.get("max_per_topic", 2))),
+        topic_repeat_penalty=float(diversity_payload.get("topic_repeat_penalty", 1.15)),
+        publisher_repeat_penalty=float(diversity_payload.get("publisher_repeat_penalty", 0.85)),
+        topic_limits={
+            str(topic).lower(): max(1, int(limit))
+            for topic, limit in diversity_payload.get("topic_limits", {"recalls": 1}).items()
+        }
+    )
 
     sources = [
         SourceConfig(
@@ -75,6 +101,7 @@ def load_config(path: Path) -> AppConfig:
             url=source["url"],
             language=source.get("language", "ru"),
             weight=float(source.get("weight", 1.0)),
+            group=derive_source_group(source),
             enabled=bool(source.get("enabled", True))
         )
         for source in payload.get("sources", [])
@@ -103,5 +130,26 @@ def load_config(path: Path) -> AppConfig:
         sources=sources,
         priority_topics=list(payload.get("priority_topics", [])),
         blocked_keywords=[item.lower() for item in payload.get("blocked_keywords", [])],
-        translation=translation
+        translation=translation,
+        diversity=diversity
     )
+
+
+def derive_source_group(source: dict) -> str:
+    explicit_group = str(source.get("group", "")).strip().lower()
+    if explicit_group:
+        return explicit_group
+
+    host = urlparse(str(source.get("url", ""))).hostname or ""
+    host = host.lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if host:
+        parts = [part for part in host.split(".") if part]
+        if len(parts) >= 2:
+            return parts[-2]
+        return parts[0]
+
+    name = str(source.get("name", "")).strip().lower()
+    normalized = re.sub(r"[^0-9a-zа-я]+", "-", name).strip("-")
+    return normalized or "source"
