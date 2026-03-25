@@ -8,6 +8,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from typing import List, Optional
 
 from news_bot.config import AppConfig
 
@@ -16,10 +17,30 @@ class TelegramPublisher:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
 
-    def publish(self, message: str, image_url: str = "", caption: str = "") -> None:
-        if image_url:
+    def publish(
+        self,
+        message: str,
+        image_url: str = "",
+        image_urls: Optional[List[str]] = None,
+        caption: str = ""
+    ) -> None:
+        images = []
+        for candidate in image_urls or []:
+            if candidate and candidate not in images:
+                images.append(candidate)
+        if image_url and image_url not in images:
+            images.insert(0, image_url)
+
+        if len(images) > 1:
             try:
-                self._publish_photo(image_url, caption or message)
+                self._publish_media_group(images[:10], caption or message)
+                return
+            except RuntimeError as error:
+                print(f"[telegram] media group failed, fallback to single photo: {error}", file=sys.stderr)
+
+        if images:
+            try:
+                self._publish_photo(images[0], caption or message)
                 return
             except RuntimeError as error:
                 print(f"[telegram] photo upload failed, fallback to text: {error}", file=sys.stderr)
@@ -27,17 +48,18 @@ class TelegramPublisher:
         self._publish_message(message)
 
     def _publish_message(self, message: str) -> None:
-        payload = urllib.parse.urlencode(
-            {
-                "chat_id": self.config.telegram.channel_id,
-                "text": message,
-                "disable_web_page_preview": "true" if self.config.telegram.disable_web_page_preview else "false"
-            }
-        ).encode("utf-8")
+        payload = {
+            "chat_id": self.config.telegram.channel_id,
+            "text": message,
+            "disable_web_page_preview": "true" if self.config.telegram.disable_web_page_preview else "false"
+        }
+        if self.config.telegram.parse_mode:
+            payload["parse_mode"] = self.config.telegram.parse_mode
+
         endpoint = f"https://api.telegram.org/bot{self.config.telegram.bot_token}/sendMessage"
         request = urllib.request.Request(
             endpoint,
-            data=payload,
+            data=urllib.parse.urlencode(payload).encode("utf-8"),
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
                 "User-Agent": self.config.user_agent
@@ -64,6 +86,19 @@ class TelegramPublisher:
             file_content=image_bytes,
             file_content_type=content_type
         )
+        if self.config.telegram.parse_mode:
+            body = self._build_multipart_body(
+                boundary=boundary,
+                fields={
+                    "chat_id": self.config.telegram.channel_id,
+                    "caption": caption,
+                    "parse_mode": self.config.telegram.parse_mode
+                },
+                file_field_name="photo",
+                file_name=file_name,
+                file_content=image_bytes,
+                file_content_type=content_type
+            )
 
         endpoint = f"https://api.telegram.org/bot{self.config.telegram.bot_token}/sendPhoto"
         request = urllib.request.Request(
@@ -80,6 +115,39 @@ class TelegramPublisher:
         payload = json.loads(raw.decode("utf-8"))
         if not payload.get("ok"):
             raise RuntimeError(f"Telegram API rejected photo: {payload}")
+
+    def _publish_media_group(self, image_urls: List[str], caption: str) -> None:
+        media = []
+        for index, image_url in enumerate(image_urls):
+            item = {
+                "type": "photo",
+                "media": image_url
+            }
+            if index == 0:
+                item["caption"] = caption
+                if self.config.telegram.parse_mode:
+                    item["parse_mode"] = self.config.telegram.parse_mode
+            media.append(item)
+
+        payload = {
+            "chat_id": self.config.telegram.channel_id,
+            "media": json.dumps(media, ensure_ascii=False)
+        }
+        endpoint = f"https://api.telegram.org/bot{self.config.telegram.bot_token}/sendMediaGroup"
+        request = urllib.request.Request(
+            endpoint,
+            data=urllib.parse.urlencode(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": self.config.user_agent
+            },
+            method="POST"
+        )
+
+        raw = self._send_request(request)
+        response_payload = json.loads(raw.decode("utf-8"))
+        if not response_payload.get("ok"):
+            raise RuntimeError(f"Telegram API rejected media group: {response_payload}")
 
     def _download_image(self, image_url: str) -> tuple[bytes, str, str]:
         request = urllib.request.Request(

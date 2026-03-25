@@ -13,9 +13,9 @@ META_IMAGE_RE = re.compile(
     re.IGNORECASE
 )
 IMG_SRC_RE = re.compile(r"<img[^>]+src=[\"']([^\"']+)[\"']", re.IGNORECASE)
+NOISY_IMAGE_RE = re.compile(r"(logo|icon|sprite|avatar|favicon|banner-ad|analytics)", re.IGNORECASE)
 
-
-def fetch_page_image(url: str, config: AppConfig) -> str:
+def fetch_page_images(url: str, config: AppConfig, limit: int = 4) -> list[str]:
     request = urllib.request.Request(
         url,
         headers={
@@ -28,21 +28,45 @@ def fetch_page_image(url: str, config: AppConfig) -> str:
         payload = response.read(512_000)
 
     if "html" not in content_type:
-        return ""
+        return []
 
     page = payload.decode("utf-8", errors="ignore")
+    candidates = []
 
-    meta_match = META_IMAGE_RE.search(page)
-    if meta_match:
-        return absolute_url(meta_match.group(1), url)
+    for match in META_IMAGE_RE.findall(page):
+        candidates.append(absolute_url(match, url))
 
-    image_match = IMG_SRC_RE.search(page)
-    if image_match:
-        return absolute_url(image_match.group(1), url)
+    for match in IMG_SRC_RE.findall(page):
+        candidates.append(absolute_url(match, url))
 
-    return ""
+    return unique_images(candidates, limit=limit)
+
+
+def fetch_page_image(url: str, config: AppConfig) -> str:
+    images = fetch_page_images(url, config, limit=1)
+    return images[0] if images else ""
 
 
 def absolute_url(value: str, base_url: str) -> str:
     clean_value = html.unescape(value.strip())
     return urllib.parse.urljoin(base_url, clean_value)
+
+
+def unique_images(candidates: list[str], limit: int) -> list[str]:
+    seen = set()
+    images = []
+
+    for candidate in candidates:
+        clean = candidate.strip()
+        if not clean or clean.startswith("data:"):
+            continue
+        if NOISY_IMAGE_RE.search(clean):
+            continue
+        if clean in seen:
+            continue
+        seen.add(clean)
+        images.append(clean)
+        if len(images) >= limit:
+            break
+
+    return images

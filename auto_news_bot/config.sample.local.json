@@ -2,6 +2,7 @@
   "telegram": {
     "bot_token": "dry-run-token",
     "channel_id": "@dry_run_channel",
+    "parse_mode": "HTML",
     "disable_web_page_preview": false
   },
   "poll_interval_minutes": 30,

@@ -10,6 +10,8 @@
 - удаляет дубли по ссылкам и похожим заголовкам;
 - ранжирует новости по теме, свежести и числу совпавших источников;
 - старается чередовать темы и издания, чтобы лента не состояла из одинаковых `recall`-новостей;
+- оформляет посты для Telegram с жирными заголовками, курсивом, эмодзи, ссылкой и скрытым блоком с оригиналом;
+- умеет отправлять не только одно фото, но и небольшую карусель, если на странице новости найдено несколько изображений;
 - публикует посты в Telegram-канал без ручного подтверждения;
 - хранит историю в SQLite, чтобы не повторять уже опубликованное;
 - умеет работать в `dry-run`, чтобы сначала посмотреть результат без публикации.
@@ -106,6 +108,14 @@ python3 main.py --config config.sample.local.json --once --dry-run --verbose
   - краткая суть;
   - источник.
 
+При этом для Telegram включено богатое форматирование через `parse_mode: HTML`, потому что так надежнее работают:
+
+- жирный заголовок;
+- курсив для лида;
+- ссылка `Читать полностью`;
+- `tg-spoiler` для скрытого оригинала;
+- эмодзи и хэштеги без сложного экранирования.
+
 Если в исходной ленте сам заголовок очень эмоциональный, бот попытается его сгладить, но на 100% убрать редакционную окраску у всех внешних источников невозможно. Для максимально ровного стиля лучше использовать деловые или нейтральные RSS-источники.
 
 ## Мировые новости на русском
@@ -166,6 +176,8 @@ python3 main.py --config config.json --once --dry-run
 - InsideEVs RSS: [https://insideevs.com/rss/](https://insideevs.com/rss/)
 - The Car Connection RSS: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
 - Green Car Reports RSS: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)
+- BMW Group PressClub RSS: [https://www.press.bmwgroup.com/global/info/rss](https://www.press.bmwgroup.com/global/info/rss)
+- Hyundai Newsroom RSS: [https://www.hyundai.com/worldwide/en/newsroom](https://www.hyundai.com/worldwide/en/newsroom)
 
 Источники проверены по их официальным страницам RSS:
 
@@ -175,3 +187,5 @@ python3 main.py --config config.json --once --dry-run
 - InsideEVs RSS page: [https://insideevs.com/rss/](https://insideevs.com/rss/)
 - The Car Connection RSS page: [https://www.thecarconnection.com/rss](https://www.thecarconnection.com/rss)
 - Green Car Reports RSS page: [https://www.greencarreports.com/news/rss-feed](https://www.greencarreports.com/news/rss-feed)
+- BMW Group RSS page: [https://www.press.bmwgroup.com/global/info/rss](https://www.press.bmwgroup.com/global/info/rss)
+- Hyundai Newsroom RSS page: [https://www.hyundai.com/worldwide/en/newsroom](https://www.hyundai.com/worldwide/en/newsroom)

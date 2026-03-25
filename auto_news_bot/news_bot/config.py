@@ -22,6 +22,7 @@ class SourceConfig:
 class TelegramConfig:
     bot_token: str
     channel_id: str
+    parse_mode: str = "HTML"
     disable_web_page_preview: bool = False
 
 
@@ -73,6 +74,7 @@ def load_config(path: Path) -> AppConfig:
     telegram = TelegramConfig(
         bot_token=telegram_payload["bot_token"],
         channel_id=telegram_payload["channel_id"],
+        parse_mode=str(telegram_payload.get("parse_mode", "HTML") or "HTML"),
         disable_web_page_preview=bool(telegram_payload.get("disable_web_page_preview", False))
     )
     translation_payload = payload.get("translation", {})

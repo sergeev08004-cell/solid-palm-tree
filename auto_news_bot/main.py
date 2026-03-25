@@ -8,7 +8,7 @@ from pathlib import Path
 
 from news_bot.config import load_config
 from news_bot.formatter import format_caption, format_post
-from news_bot.page_images import fetch_page_image
+from news_bot.page_images import fetch_page_images
 from news_bot.ranking import rank_candidates
 from news_bot.storage import Storage
 from news_bot.telegram_api import TelegramPublisher
@@ -52,19 +52,25 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
                 print("[cycle] publish gap active, postponing remaining items")
             break
 
-        item = enrich_item_image(item, config, verbose=verbose)
+        item, image_urls = enrich_item_images(item, config, verbose=verbose)
         item = localize_item(item, translator, verbose=verbose)
         message = format_post(item, config.publication_title)
         caption = format_caption(item, config.publication_title)
         if dry_run:
             print("=" * 72)
             print(message)
-            if item.image_url:
+            if image_urls:
                 print("")
-                print(f"Картинка: {item.image_url}")
+                for index, image_url in enumerate(image_urls, start=1):
+                    print(f"Картинка {index}: {image_url}")
             print("=" * 72)
         else:
-            publisher.publish(message, image_url=item.image_url, caption=caption)
+            publisher.publish(
+                message,
+                image_url=item.image_url,
+                image_urls=image_urls,
+                caption=caption
+            )
             storage.mark_published(item)
 
         published += 1
@@ -102,26 +108,35 @@ def localize_item(item, translator: Translator, verbose: bool = False):
     )
 
 
-def enrich_item_image(item, config, verbose: bool = False):
+def enrich_item_images(item, config, verbose: bool = False):
+    images = []
     if item.image_url:
-        return item
+        images.append(item.image_url)
 
     try:
-        image_url = fetch_page_image(item.url, config)
+        page_images = fetch_page_images(item.url, config, limit=4)
     except Exception as error:
         if verbose:
             print(f"[image] source={item.source_name} error={error}")
-        return item
+        return item, images
 
-    if not image_url:
+    for image_url in page_images:
+        if image_url not in images:
+            images.append(image_url)
+
+    if not images:
         if verbose:
             print(f"[image] source={item.source_name} no image found for {item.url}")
-        return item
+        return item, []
 
     if verbose:
-        print(f"[image] source={item.source_name} image={image_url}")
+        print(f"[image] source={item.source_name} images={len(images)} first={images[0]}")
 
-    return replace(item, image_url=image_url)
+    primary_image = images[0]
+    if item.image_url == primary_image:
+        return item, images
+
+    return replace(item, image_url=primary_image), images
 
 
 def main() -> int:

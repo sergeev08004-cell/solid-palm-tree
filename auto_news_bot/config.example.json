@@ -2,6 +2,7 @@
   "telegram": {
     "bot_token": "PASTE_TELEGRAM_BOT_TOKEN_HERE",
     "channel_id": "@your_channel_name",
+    "parse_mode": "HTML",
     "disable_web_page_preview": false
   },
   "poll_interval_minutes": 30,
@@ -78,6 +79,22 @@
       "language": "en",
       "group": "greencarreports",
       "weight": 0.9,
+      "enabled": true
+    },
+    {
+      "name": "BMW Group Brands and Products",
+      "url": "https://www.press.bmwgroup.com/global/rss/topic/4099",
+      "language": "en",
+      "group": "bmwgroup",
+      "weight": 0.85,
+      "enabled": true
+    },
+    {
+      "name": "Hyundai Newsroom",
+      "url": "https://www.hyundai.com/wsvc/ww/rss/newsroom.newsroom.do",
+      "language": "en",
+      "group": "hyundai",
+      "weight": 0.85,
       "enabled": true
     },
     {
