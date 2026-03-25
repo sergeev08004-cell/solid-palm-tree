@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Sample Auto Feed</title>
+    <link>https://example.com</link>
+    <description>Sample feed for local dry runs</description>
+    <item>
+      <title>Автопроизводитель объявил отзыв из-за неисправности тормозной системы</title>
+      <link>https://example.com/news/recall-001</link>
+      <description><![CDATA[<img src="https://example.com/images/recall-001.jpg" />Компания сообщила о сервисной кампании для части автомобилей после проверки узла тормозной системы.]]></description>
+      <pubDate>Wed, 25 Mar 2026 18:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Представлен новый электрический кроссовер для европейского рынка</title>
+      <link>https://example.com/news/ev-002</link>
+      <description>Производитель раскрыл основные характеристики модели, сроки выхода и параметры батареи.</description>
+      <enclosure url="https://example.com/images/ev-002.jpg" type="image/jpeg" />
+      <pubDate>Wed, 25 Mar 2026 17:40:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Тест-драйв нового седана в зимних условиях</title>
+      <link>https://example.com/review/test-drive-003</link>
+      <description>Редакция делится впечатлениями от поездки и сравнивает настройки шасси.</description>
+      <pubDate>Wed, 25 Mar 2026 17:10:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

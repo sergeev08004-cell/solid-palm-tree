@@ -1,0 +1,88 @@
+{
+  "telegram": {
+    "bot_token": "dry-run-token",
+    "channel_id": "@dry_run_channel",
+    "disable_web_page_preview": false
+  },
+  "poll_interval_minutes": 30,
+  "max_posts_per_cycle": 3,
+  "min_post_age_minutes": 5,
+  "max_post_age_hours": 24,
+  "min_publish_gap_minutes": 0,
+  "request_timeout_seconds": 5,
+  "database_path": "data/sample-news.db",
+  "user_agent": "AutoNewsBot/1.0 (local dry run)",
+  "publication_title": "Мировые автоновости",
+  "translation": {
+    "enabled": false,
+    "provider": "google_web",
+    "target_language": "ru",
+    "source_languages": [
+      "en"
+    ]
+  },
+  "sources": [
+    {
+      "name": "SampleFeed",
+      "url": "file:///Users/sergejsergeev/Documents/Playground/auto_news_bot/examples/sample_feed.xml",
+      "language": "ru",
+      "weight": 1.0,
+      "enabled": true
+    }
+  ],
+  "priority_topics": [
+    "recalls",
+    "law",
+    "new_models",
+    "prices",
+    "sales",
+    "production",
+    "electric",
+    "technology"
+  ],
+  "blocked_keywords": [
+    "тест-драйв",
+    "обзор",
+    "сравнение",
+    "подборка",
+    "мнение",
+    "колонка",
+    "фото",
+    "видео",
+    "галерея",
+    "опыт владения",
+    "review",
+    "first drive",
+    "first drives",
+    "driving notes",
+    "why buy",
+    "comparison",
+    "opinion",
+    "editorial",
+    "podcast",
+    "sponsored",
+    "list",
+    "lists",
+    "rumor",
+    "rumors",
+    "spy shot",
+    "spyshots",
+    "rendering",
+    "renderings",
+    "teaser",
+    "motorcycle",
+    "motorcycles",
+    "bike",
+    "bikes",
+    "enduro",
+    "scooter",
+    "e-bike",
+    "ebike",
+    "aviation",
+    "aircraft",
+    "boat",
+    "yacht",
+    "gallery",
+    "video"
+  ]
+}

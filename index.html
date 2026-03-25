@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Морской бой — карандашный набросок</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-page">
+    <header class="hero">
+      <p class="eyebrow">тетрадный режим</p>
+      <h1>Морской бой</h1>
+      <p class="subtitle">
+        Партия выглядит так, будто ее наспех нарисовали простым карандашом
+        в блокноте перед началом урока.
+      </p>
+    </header>
+
+    <section class="control-strip">
+      <button class="sketch-button" id="new-game" type="button">Новая партия</button>
+
+      <div class="status-card">
+        <p class="status-label">Ход партии</p>
+        <p class="status-text tone-neutral" id="status" aria-live="polite">
+          Ваш ход. Начинайте обстрел по правому полю.
+        </p>
+      </div>
+
+      <div class="legend-card" aria-label="Условные обозначения">
+        <span class="legend-item">
+          <span class="legend-mark legend-ship"></span>
+          свой корабль
+        </span>
+        <span class="legend-item">
+          <span class="legend-mark legend-hit"></span>
+          попадание
+        </span>
+        <span class="legend-item">
+          <span class="legend-mark legend-miss"></span>
+          промах
+        </span>
+      </div>
+    </section>
+
+    <section class="boards">
+      <article class="board-card player-card">
+        <div class="board-heading">
+          <div>
+            <p class="board-kicker">левая страница</p>
+            <h2>Ваш флот</h2>
+          </div>
+          <p class="board-summary" id="player-summary"></p>
+        </div>
+
+        <div class="board-shell">
+          <div class="axis-top" aria-hidden="true"></div>
+          <div class="axis-side" aria-hidden="true"></div>
+          <div class="board-grid" id="player-board" aria-label="Ваше поле"></div>
+        </div>
+      </article>
+
+      <article class="board-card enemy-card">
+        <div class="board-heading">
+          <div>
+            <p class="board-kicker">правая страница</p>
+            <h2>Поле соперника</h2>
+          </div>
+          <p class="board-summary" id="enemy-summary"></p>
+        </div>
+
+        <div class="board-shell">
+          <div class="axis-top" aria-hidden="true"></div>
+          <div class="axis-side" aria-hidden="true"></div>
+          <div class="board-grid" id="enemy-board" aria-label="Поле соперника"></div>
+        </div>
+      </article>
+    </section>
+
+    <aside class="note-card">
+      <p class="note-title">Записка на полях</p>
+      <p>
+        Корабли расставляются автоматически по классическим правилам и не
+        касаются друг друга даже по диагонали. Попали — стреляете еще раз.
+        Компьютер играет по тому же правилу и пытается добивать найденный
+        корабль, а не палить вслепую.
+      </p>
+    </aside>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

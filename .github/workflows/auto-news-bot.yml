@@ -1,0 +1,55 @@
+name: Auto News Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-news-bot
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prepare bot config
+        working-directory: auto_news_bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          AUTO_NEWS_PUBLICATION_TITLE: ${{ vars.AUTO_NEWS_PUBLICATION_TITLE }}
+        run: |
+          mkdir -p state
+          python3 scripts/build_ci_config.py --base config.example.json --output config.ci.json
+
+      - name: Run bot once
+        working-directory: auto_news_bot
+        run: python3 main.py --config config.ci.json --once --verbose
+
+      - name: Commit updated state
+        run: |
+          if [ -z "$(git status --short -- auto_news_bot/state/news.db)" ]; then
+            echo "No state changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add auto_news_bot/state/news.db
+          git commit -m "chore: update auto news bot state"
+          git push
