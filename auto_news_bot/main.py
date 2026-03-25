@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from news_bot.config import load_config
-from news_bot.formatter import format_caption, format_post
+from news_bot.formatter import detect_brand_label, format_caption, format_post
 from news_bot.page_images import fetch_page_images
 from news_bot.ranking import rank_candidates
 from news_bot.storage import Storage
@@ -56,6 +56,7 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
         item = localize_item(item, translator, verbose=verbose)
         message = format_post(item, config.publication_title)
         caption = format_caption(item, config.publication_title)
+        album_label = detect_brand_label(item)
         if dry_run:
             print("=" * 72)
             print(message)
@@ -63,13 +64,16 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
                 print("")
                 for index, image_url in enumerate(image_urls, start=1):
                     print(f"Картинка {index}: {image_url}")
+                    if index in (2, 3):
+                        print(f"Подпись {index}: {album_label}")
             print("=" * 72)
         else:
             publisher.publish(
                 message,
                 image_url=item.image_url,
                 image_urls=image_urls,
-                caption=caption
+                caption=caption,
+                album_label=album_label
             )
             storage.mark_published(item)
 

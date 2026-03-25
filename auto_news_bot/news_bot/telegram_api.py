@@ -22,7 +22,8 @@ class TelegramPublisher:
         message: str,
         image_url: str = "",
         image_urls: Optional[List[str]] = None,
-        caption: str = ""
+        caption: str = "",
+        album_label: str = ""
     ) -> None:
         images = []
         for candidate in image_urls or []:
@@ -33,7 +34,7 @@ class TelegramPublisher:
 
         if len(images) > 1:
             try:
-                self._publish_media_group(images[:10], caption or message)
+                self._publish_media_group(images[:10], caption or message, album_label=album_label)
                 return
             except RuntimeError as error:
                 print(f"[telegram] media group failed, fallback to single photo: {error}", file=sys.stderr)
@@ -116,7 +117,7 @@ class TelegramPublisher:
         if not payload.get("ok"):
             raise RuntimeError(f"Telegram API rejected photo: {payload}")
 
-    def _publish_media_group(self, image_urls: List[str], caption: str) -> None:
+    def _publish_media_group(self, image_urls: List[str], caption: str, album_label: str = "") -> None:
         media = []
         for index, image_url in enumerate(image_urls):
             item = {
@@ -125,6 +126,10 @@ class TelegramPublisher:
             }
             if index == 0:
                 item["caption"] = caption
+                if self.config.telegram.parse_mode:
+                    item["parse_mode"] = self.config.telegram.parse_mode
+            elif album_label and index in (1, 2):
+                item["caption"] = f"<b>{album_label}</b>"
                 if self.config.telegram.parse_mode:
                     item["parse_mode"] = self.config.telegram.parse_mode
             media.append(item)

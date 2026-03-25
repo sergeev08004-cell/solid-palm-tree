@@ -159,9 +159,9 @@ def _format_post(
     lead, bullets = build_story_blocks(summary, max_bullets=max_bullets)
     tags = build_hashtags(item, title)
     lines = [
-        f"{emoji} <b>{escape_text(publication_title)}</b>",
+        f"<b>{escape_text(publication_title)}</b>",
         "",
-        f"<b>{escape_text(title)}</b>"
+        f"{emoji} <b>{escape_text(title)}</b>"
     ]
 
     if lead:
@@ -235,9 +235,9 @@ def _format_post(
 
     trimmed_bullets = bullets[: max(1, max_bullets - 1)]
     fallback_lines = [
-        f"{emoji} <b>{escape_text(publication_title)}</b>",
+        f"<b>{escape_text(publication_title)}</b>",
         "",
-        f"<b>{escape_text(title)}</b>"
+        f"{emoji} <b>{escape_text(title)}</b>"
     ]
     if lead:
         fallback_lines.extend(
@@ -316,6 +316,20 @@ def build_hashtags(item: CandidateItem, title: str) -> list[str]:
         tags.append(topic_tag)
 
     return tags[:3]
+
+
+def detect_brand_label(item: CandidateItem, title: str = "") -> str:
+    haystack = f"{title} {item.title} {item.summary} {item.source_name}".lower()
+
+    for phrase, tag in BRAND_TAGS:
+        if phrase in haystack:
+            return tag
+
+    source_tag = SOURCE_TAGS.get(item.source_group)
+    if source_tag:
+        return source_tag
+
+    return item.source_name.split()[0]
 
 
 def source_label(item: CandidateItem) -> str:
