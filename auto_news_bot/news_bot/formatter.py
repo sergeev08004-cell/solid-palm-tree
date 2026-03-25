@@ -241,6 +241,58 @@ CAMERA_PATTERNS = (
         re.IGNORECASE
     )
 )
+PRICE_PATTERNS = (
+    re.compile(
+        r"(?:цен\w*|стоимост\w*|price(?:d)?|pricing|starts?\s+at|starting\s+at|from)(?:[^0-9$€£¥₽₸]{0,18})"
+        r"(?P<value>(?:от|from)?\s*(?:[$€£¥₽₸]\s?\d[\d\s.,]*(?:\s?(?:k|m))?|\d[\d\s.,]*(?:\s?(?:тыс\.?|млн|k|m|million))?\s*"
+        r"(?:руб(?:лей|ля|\.?)|₽|usd|доллар(?:ов|а)?|eur|евро|€|£|фунт(?:ов|а)?|тенге|₸|yuan|юан(?:ей|я)?|¥)))",
+        re.IGNORECASE
+    ),
+)
+MODEL_STOPWORDS = {
+    "обновила",
+    "обновил",
+    "представила",
+    "представил",
+    "показала",
+    "показал",
+    "раскрыла",
+    "раскрыл",
+    "сообщила",
+    "сообщил",
+    "запустила",
+    "запустил",
+    "получила",
+    "получил",
+    "получили",
+    "получит",
+    "получат",
+    "вышла",
+    "вышел",
+    "вышли",
+    "объявила",
+    "объявил",
+    "стартовали",
+    "начались",
+    "стартовал",
+    "получает",
+    "получают",
+    "to",
+    "for",
+    "gets",
+    "get",
+    "gains",
+    "gain",
+    "debuts",
+    "debuts,"
+}
+MODEL_BRAND_PATTERN = "|".join(
+    sorted((re.escape(phrase) for phrase, _ in BRAND_TAGS), key=len, reverse=True)
+)
+MODEL_MENTION_RE = re.compile(
+    rf"\b(?P<brand>{MODEL_BRAND_PATTERN})(?P<tail>(?:\s+[A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9+/.\-]*){{1,4}})",
+    re.IGNORECASE
+)
 
 
 def format_post(item: CandidateItem, publication_title: str) -> str:
@@ -278,14 +330,12 @@ def _format_post(
     published = format_russian_date(item.published_at_utc.astimezone(timezone.utc))
     emoji = TOPIC_EMOJIS.get(item.topic, "📰")
 
-    lead, bullets = build_story_blocks(summary, max_bullets=max_bullets)
-    specs = extract_spec_highlights(item, title, summary, max_specs=max_bullets + 1)
+    model_specs = extract_model_spec_lines(item, title, summary, max_models=max_bullets + 1)
+    lead, bullets = build_story_blocks(summary, max_bullets=max_bullets, skip_model_sentences=bool(model_specs))
+    specs = [] if model_specs else extract_spec_highlights(item, title, summary, max_specs=max_bullets + 1)
+    price_block = build_price_block(item, title, summary, max_lines=max_bullets)
     tags = build_hashtags(item, title)
-    lines = [
-        f"<b>{escape_text(publication_title)}</b>",
-        "",
-        f"{emoji} <b>{escape_text(title)}</b>"
-    ]
+    lines = [f"{emoji} <b>{escape_text(title)}</b>"]
 
     if lead:
         lines.extend(
@@ -295,11 +345,19 @@ def _format_post(
             ]
         )
 
-    if specs:
+    if model_specs:
         lines.extend(
             [
                 "",
-                "<b>Характеристики:</b>"
+                "<b>По моделям:</b>"
+            ]
+        )
+        lines.extend(f"• {escape_text(spec)}" for spec in model_specs)
+    elif specs:
+        lines.extend(
+            [
+                "",
+                "<b>Характеристики авто:</b>"
             ]
         )
         lines.extend(f"• {escape_text(spec)}" for spec in specs)
@@ -312,7 +370,7 @@ def _format_post(
             ]
         )
         lines.extend(f"• {escape_text(bullet)}" for bullet in bullets)
-    elif summary and summary.lower() != lead.lower():
+    elif summary and summary.lower() != lead.lower() and not (specs or model_specs):
         lines.extend(
             [
                 "",
@@ -361,16 +419,16 @@ def _format_post(
             ]
         )
 
+    if price_block:
+        lines.extend(["", price_block[0]])
+        lines.extend(f"• {escape_text(line)}" for line in price_block[1:])
+
     text = "\n".join(lines).strip()
     if len(text) <= max_length:
         return text
 
     trimmed_bullets = bullets[: max(1, max_bullets - 1)]
-    fallback_lines = [
-        f"<b>{escape_text(publication_title)}</b>",
-        "",
-        f"{emoji} <b>{escape_text(title)}</b>"
-    ]
+    fallback_lines = [f"{emoji} <b>{escape_text(title)}</b>"]
     if lead:
         fallback_lines.extend(
             [
@@ -378,6 +436,15 @@ def _format_post(
                 f"<i>{escape_text(truncate(lead, 180))}</i>"
             ]
         )
+    trimmed_model_specs = model_specs[:2]
+    if trimmed_model_specs:
+        fallback_lines.extend(
+            [
+                "",
+                "<b>По моделям:</b>"
+            ]
+        )
+        fallback_lines.extend(f"• {escape_text(truncate(spec, 120))}" for spec in trimmed_model_specs)
     if trimmed_bullets:
         fallback_lines.extend(
             [
@@ -406,11 +473,14 @@ def _format_post(
     )
     if tags:
         fallback_lines.extend(["", " ".join(f"#{tag}" for tag in tags[:2])])
+    if price_block:
+        fallback_lines.extend(["", price_block[0]])
+        fallback_lines.extend(f"• {escape_text(truncate(line, 70))}" for line in price_block[1:3])
 
     return truncate("\n".join(fallback_lines).strip(), max_length)
 
 
-def build_story_blocks(summary: str, max_bullets: int) -> tuple[str, list[str]]:
+def build_story_blocks(summary: str, max_bullets: int, skip_model_sentences: bool = False) -> tuple[str, list[str]]:
     if not summary:
         return "", []
 
@@ -420,10 +490,18 @@ def build_story_blocks(summary: str, max_bullets: int) -> tuple[str, list[str]]:
         return clean_summary, []
 
     lead = truncate(sentences[0], 190)
+    if skip_model_sentences and sentence_is_model_heavy(sentences[0]):
+        lead = ""
     bullets: list[str] = []
 
     for sentence in sentences[1:]:
-        bullet = truncate(sentence, 140)
+        if skip_model_sentences and (
+            sentence_is_model_heavy(sentence) or extract_specs_from_text(sentence, max_specs=1)
+        ):
+            continue
+        if extract_price_value(sentence):
+            continue
+        bullet = truncate(strip_leading_connector(sentence), 140)
         if bullet and bullet.lower() != lead.lower():
             bullets.append(bullet)
         if len(bullets) >= max_bullets:
@@ -438,6 +516,41 @@ def build_story_blocks(summary: str, max_bullets: int) -> tuple[str, list[str]]:
     return lead, [bullet for bullet in bullets if bullet]
 
 
+def extract_model_spec_lines(item: CandidateItem, title: str, summary: str, max_models: int) -> list[str]:
+    if max_models <= 0 or not should_include_specs(item, title, summary):
+        return []
+
+    text = EXTRA_SPACE_RE.sub(" ", summary or title).strip()
+    mentions = extract_model_mentions(text)
+    if len(mentions) < 2:
+        return []
+
+    grouped: dict[str, list[str]] = {}
+    ordered_models: list[str] = []
+
+    for index, (model_name, start, end) in enumerate(mentions):
+        segment_end = mentions[index + 1][1] if index + 1 < len(mentions) else len(text)
+        segment = text[start:segment_end]
+        specs = extract_specs_from_text(segment, max_specs=3)
+        if not specs:
+            continue
+        if model_name not in grouped:
+            grouped[model_name] = []
+            ordered_models.append(model_name)
+        for spec in specs:
+            if spec not in grouped[model_name]:
+                grouped[model_name].append(spec)
+
+    lines = [
+        f"{model_name}: {', '.join(grouped[model_name][:3])}"
+        for model_name in ordered_models
+        if grouped.get(model_name)
+    ]
+    if len(lines) < 2:
+        return []
+    return lines[:max_models]
+
+
 def extract_spec_highlights(item: CandidateItem, title: str, summary: str, max_specs: int) -> list[str]:
     if max_specs <= 0 or not should_include_specs(item, title, summary):
         return []
@@ -446,6 +559,25 @@ def extract_spec_highlights(item: CandidateItem, title: str, summary: str, max_s
     if not text:
         return []
 
+    return extract_specs_from_text(text, max_specs=max_specs)
+
+
+def should_include_specs(item: CandidateItem, title: str, summary: str) -> bool:
+    haystack = f"{title} {summary}".lower()
+
+    if item.topic in SPEC_FOCUS_TOPICS:
+        return True
+
+    if item.topic == "technology" and any(keyword in haystack for keyword in GADGET_KEYWORDS):
+        return True
+
+    has_model_hint = any(keyword in haystack for keyword in MODEL_KEYWORDS)
+    has_gadget_hint = any(keyword in haystack for keyword in GADGET_KEYWORDS)
+    has_spec_hint = any(keyword in haystack for keyword in ("характерист", "spec", "техданн"))
+    return has_spec_hint and (has_model_hint or has_gadget_hint)
+
+
+def extract_specs_from_text(text: str, max_specs: int) -> list[str]:
     extractors = (
         extract_power_spec,
         extract_battery_spec,
@@ -478,19 +610,116 @@ def extract_spec_highlights(item: CandidateItem, title: str, summary: str, max_s
     return specs
 
 
-def should_include_specs(item: CandidateItem, title: str, summary: str) -> bool:
-    haystack = f"{title} {summary}".lower()
+def extract_model_mentions(text: str) -> list[tuple[str, int, int]]:
+    mentions: list[tuple[str, int, int]] = []
+    seen: set[str] = set()
 
-    if item.topic in SPEC_FOCUS_TOPICS:
+    for match in MODEL_MENTION_RE.finditer(text):
+        brand = match.group("brand").strip()
+        tail_tokens = [clean_token(token) for token in match.group("tail").split()]
+        model_tokens: list[str] = []
+
+        for token in tail_tokens:
+            if not is_model_token(token):
+                break
+            model_tokens.append(token)
+
+        if not model_tokens:
+            continue
+
+        model_name = " ".join([brand] + model_tokens)
+        key = model_name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        mentions.append((model_name, match.start(), match.end()))
+
+    return mentions
+
+
+def is_model_token(token: str) -> bool:
+    cleaned = clean_token(token)
+    if not cleaned:
+        return False
+    if cleaned.lower() in MODEL_STOPWORDS:
+        return False
+    if any(char.isdigit() for char in cleaned):
         return True
-
-    if item.topic == "technology" and any(keyword in haystack for keyword in GADGET_KEYWORDS):
+    if cleaned != cleaned.lower():
         return True
+    return False
 
-    has_model_hint = any(keyword in haystack for keyword in MODEL_KEYWORDS)
-    has_gadget_hint = any(keyword in haystack for keyword in GADGET_KEYWORDS)
-    has_spec_hint = any(keyword in haystack for keyword in ("характерист", "spec", "техданн"))
-    return has_spec_hint and (has_model_hint or has_gadget_hint)
+
+def clean_token(token: str) -> str:
+    return token.strip(" ,.;:()[]{}<>\"'")
+
+
+def sentence_is_model_heavy(text: str) -> bool:
+    cleaned = strip_leading_connector(text)
+    return bool(
+        len(extract_model_mentions(cleaned)) >= 2
+        or (
+            extract_model_mentions(cleaned)
+            and (extract_specs_from_text(cleaned, max_specs=1) or extract_price_value(cleaned))
+        )
+    )
+
+
+def strip_leading_connector(text: str) -> str:
+    return re.sub(r"^(?:и|а|но|also|and)\s+", "", text.strip(), flags=re.IGNORECASE)
+
+
+def build_price_block(item: CandidateItem, title: str, summary: str, max_lines: int) -> list[str]:
+    text = EXTRA_SPACE_RE.sub(" ", f"{title}. {summary}").strip()
+    if not text:
+        return []
+
+    model_prices = extract_model_price_lines(item, title, summary, max_lines=max_lines)
+    if len(model_prices) > 1:
+        return ["💰 <b>Цены:</b>", *model_prices[:max_lines]]
+
+    if model_prices:
+        return [f"💰 <b>Цена:</b> {model_prices[0].split(': ', 1)[-1]}"]
+
+    price_value = extract_price_value(text)
+    if not price_value:
+        return []
+    return [f"💰 <b>Цена:</b> {price_value}"]
+
+
+def extract_model_price_lines(item: CandidateItem, title: str, summary: str, max_lines: int) -> list[str]:
+    if max_lines <= 0 or not should_include_specs(item, title, summary):
+        return []
+
+    text = EXTRA_SPACE_RE.sub(" ", summary or title).strip()
+    mentions = extract_model_mentions(text)
+    if len(mentions) < 2:
+        return []
+
+    lines: list[str] = []
+    for index, (model_name, start, end) in enumerate(mentions):
+        segment_end = mentions[index + 1][1] if index + 1 < len(mentions) else len(text)
+        segment = text[start:segment_end]
+        price_value = extract_price_value(segment)
+        if not price_value:
+            continue
+        lines.append(f"{model_name}: {price_value}")
+        if len(lines) >= max_lines:
+            break
+    return lines
+
+
+def extract_price_value(text: str) -> str | None:
+    for pattern in PRICE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        value = EXTRA_SPACE_RE.sub(" ", match.group("value")).strip(" .,:;")
+        lowered = value.lower()
+        if lowered.startswith("from "):
+            value = f"от {value[5:]}"
+        return value
+    return None
 
 
 def extract_power_spec(text: str) -> str | None:
