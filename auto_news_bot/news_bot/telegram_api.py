@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import html
 import json
 import mimetypes
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -45,16 +47,34 @@ class TelegramPublisher:
                 return
             except RuntimeError as error:
                 print(f"[telegram] photo upload failed, fallback to text: {error}", file=sys.stderr)
+                plain_caption = self._plain_text(caption or message)
+                if plain_caption and plain_caption != (caption or message):
+                    try:
+                        self._publish_photo(images[0], plain_caption, force_plain=True)
+                        return
+                    except RuntimeError as plain_error:
+                        print(
+                            f"[telegram] plain photo upload failed, fallback to text: {plain_error}",
+                            file=sys.stderr
+                        )
 
-        self._publish_message(message)
+        try:
+            self._publish_message(message)
+        except RuntimeError as error:
+            plain_message = self._plain_text(message)
+            if plain_message and plain_message != message:
+                print(f"[telegram] rich text failed, retrying plain text: {error}", file=sys.stderr)
+                self._publish_message(plain_message, force_plain=True)
+                return
+            raise
 
-    def _publish_message(self, message: str) -> None:
+    def _publish_message(self, message: str, force_plain: bool = False) -> None:
         payload = {
             "chat_id": self.config.telegram.channel_id,
             "text": message,
             "disable_web_page_preview": "true" if self.config.telegram.disable_web_page_preview else "false"
         }
-        if self.config.telegram.parse_mode:
+        if self.config.telegram.parse_mode and not force_plain:
             payload["parse_mode"] = self.config.telegram.parse_mode
 
         endpoint = f"https://api.telegram.org/bot{self.config.telegram.bot_token}/sendMessage"
@@ -73,7 +93,7 @@ class TelegramPublisher:
         if not payload.get("ok"):
             raise RuntimeError(f"Telegram API rejected message: {payload}")
 
-    def _publish_photo(self, image_url: str, caption: str) -> None:
+    def _publish_photo(self, image_url: str, caption: str, force_plain: bool = False) -> None:
         image_bytes, file_name, content_type = self._download_image(image_url)
         boundary = f"----AutoNewsBot{uuid.uuid4().hex}"
         body = self._build_multipart_body(
@@ -87,7 +107,7 @@ class TelegramPublisher:
             file_content=image_bytes,
             file_content_type=content_type
         )
-        if self.config.telegram.parse_mode:
+        if self.config.telegram.parse_mode and not force_plain:
             body = self._build_multipart_body(
                 boundary=boundary,
                 fields={
@@ -229,3 +249,11 @@ class TelegramPublisher:
             raise RuntimeError(f"Telegram API HTTP {error.code}: {details}") from error
         except urllib.error.URLError as error:
             raise RuntimeError(f"Telegram API connection error: {error.reason}") from error
+
+    def _plain_text(self, message: str) -> str:
+        text = re.sub(r"<tg-spoiler>.*?</tg-spoiler>", "", message, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", "", text)
+        text = html.unescape(text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()

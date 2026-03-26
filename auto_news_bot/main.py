@@ -43,6 +43,8 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
         print(f"[cycle] candidates={len(candidates)} ranked={len(ranked)} dry_run={dry_run}")
 
     published = 0
+    publish_errors = 0
+    last_publish_error: Exception | None = None
     for item in ranked:
         if published >= config.max_posts_per_cycle:
             break
@@ -68,13 +70,20 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
                         print(f"Подпись {index}: {album_label}")
             print("=" * 72)
         else:
-            publisher.publish(
-                message,
-                image_url=item.image_url,
-                image_urls=image_urls,
-                caption=caption,
-                album_label=album_label
-            )
+            try:
+                publisher.publish(
+                    message,
+                    image_url=item.image_url,
+                    image_urls=image_urls,
+                    caption=caption,
+                    album_label=album_label
+                )
+            except Exception as error:
+                publish_errors += 1
+                last_publish_error = error
+                if verbose:
+                    print(f"[publish] source={item.source_name} error={error}")
+                continue
             storage.mark_published(item)
 
         published += 1
@@ -85,6 +94,9 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
 
     if verbose and published == 0:
         print("[cycle] nothing published")
+
+    if not dry_run and published == 0 and publish_errors > 0 and last_publish_error is not None:
+        raise RuntimeError(f"Unable to publish any items: {last_publish_error}")
 
     return published
 
