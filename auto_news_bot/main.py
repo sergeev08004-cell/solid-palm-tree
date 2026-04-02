@@ -17,6 +17,57 @@ from news_bot.translation import Translator
 from news_bot.worker import collect_candidates
 
 
+ACCIDENT_VISUAL_VIDEO_HINTS = (
+    "dashcam",
+    "dash cam",
+    "caught on camera",
+    "caught on video",
+    "video shows",
+    "footage shows",
+    "footage of the crash",
+    "surveillance",
+    "security camera",
+    "traffic camera",
+    "traffic cam",
+    "bodycam",
+    "body cam",
+    "camera captured",
+    "camera shows",
+    "captured the moment",
+    "video of the crash",
+    "crash footage",
+    "collision footage",
+    "момент дтп",
+    "попало на видео",
+    "кадры дтп",
+    "видеорегистратор",
+    "регистратор",
+    "камера наблюдения",
+    "запись с камеры",
+)
+ACCIDENT_REPORT_ONLY_HINTS = (
+    "police said",
+    "police say",
+    "according to police",
+    "authorities said",
+    "officials said",
+    "state police",
+    "troopers say",
+    "sheriff said",
+    "news conference",
+    "press conference",
+    "police warning",
+    "police statement",
+    "statement from police",
+    "comments from police",
+    "брифинг полиции",
+    "полиция сообщила",
+    "по данным полиции",
+    "заявили в полиции",
+    "комментарий полиции",
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Auto automotive news Telegram bot")
     parser.add_argument("--config", default="config.json", help="Path to JSON config file")
@@ -165,12 +216,14 @@ def enrich_item_media(item, config, verbose: bool = False):
         if image_url not in images:
             images.append(image_url)
 
-    primary_video = videos[0] if videos else item.video_url
+    primary_video = pick_primary_video(item, videos)
     primary_image = images[0] if images else item.image_url
 
     if verbose:
         if primary_video:
             print(f"[video] source={item.source_name} videos={len(videos)} first={primary_video}")
+        elif videos:
+            print(f"[video] source={item.source_name} skipped: video lacks clear crash footage cues")
         if primary_image:
             print(f"[image] source={item.source_name} images={len(images)} first={primary_image}")
 
@@ -243,6 +296,36 @@ def merge_short_paragraphs(paragraphs: list[str]) -> list[str]:
             continue
         merged.append(cleaned)
     return merged
+
+
+def pick_primary_video(item, videos: list[str]) -> str:
+    if not videos:
+        return item.video_url
+    if item.topic != "accidents":
+        return videos[0]
+    if accident_video_has_visual_evidence(item, videos):
+        return videos[0]
+    return ""
+
+
+def accident_video_has_visual_evidence(item, videos: list[str]) -> bool:
+    haystack = " ".join(
+        filter(
+            None,
+            [
+                item.title,
+                item.summary,
+                item.url,
+                item.source_name,
+                *videos,
+            ],
+        )
+    ).lower()
+    has_visual_hint = any(keyword in haystack for keyword in ACCIDENT_VISUAL_VIDEO_HINTS)
+    if has_visual_hint:
+        return True
+    has_report_only_hint = any(keyword in haystack for keyword in ACCIDENT_REPORT_ONLY_HINTS)
+    return not has_report_only_hint and "video" in haystack and "crash" in haystack
 
 
 def main() -> int:

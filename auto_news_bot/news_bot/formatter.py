@@ -414,7 +414,7 @@ def _format_post(
     if len(text) <= max_length:
         return text
 
-    fallback_lines = [f"<b>{escape_text(title)}</b>"]
+    fallback_lines = [build_headline(item, title)]
     for paragraph in paragraphs[:max(1, max_bullets)]:
         fallback_lines.extend(["", emphasize_paragraph(truncate(paragraph, 190))])
     if price_block:
