@@ -361,7 +361,7 @@ def _format_post(
     specs = [] if model_specs else extract_spec_highlights(item, title, summary, max_specs=max_bullets + 1)
     price_block = build_price_block(item, title, summary, max_lines=max_bullets)
     tags = build_hashtags(item, title)
-    lines = [f"{emoji} <b>{escape_text(title)}</b>"]
+    lines = [f"<b>{emoji} {escape_text(title)}</b>"]
 
     if lead:
         lines.extend(
@@ -454,7 +454,7 @@ def _format_post(
         return text
 
     trimmed_bullets = bullets[: max(1, max_bullets - 1)]
-    fallback_lines = [f"{emoji} <b>{escape_text(title)}</b>"]
+    fallback_lines = [f"<b>{emoji} {escape_text(title)}</b>"]
     if lead:
         fallback_lines.extend(
             [
