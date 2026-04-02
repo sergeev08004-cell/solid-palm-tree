@@ -11,6 +11,11 @@ from news_bot.models import CandidateItem
 MULTI_PUNCTUATION_RE = re.compile(r"[!?]+")
 EXTRA_SPACE_RE = re.compile(r"\s+")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+SUMMARY_ARTIFACT_RE = re.compile(
+    r"\(?\s*(?:continue reading|read more|keep reading|продолжить чтение|читать далее|читать полностью)[^)\n]*\)?",
+    re.IGNORECASE
+)
+EMPTY_PARENS_RE = re.compile(r"\(\s*\)")
 HASHTAG_CLEAN_RE = re.compile(r"[^0-9A-Za-zА-Яа-яЁё]+")
 PRICE_VALUE_RE = re.compile(
     r"((?:от|from)?\s*(?:[$€£¥₽₸]\s?\d[\d\s.,]*(?:\s?(?:k|m))?|\d[\d\s.,]*(?:\s?(?:тыс\.?|млн|k|m|million))?\s*"
@@ -368,7 +373,8 @@ def _format_post(
     price_block = build_price_block(item, title, summary, max_lines=max_bullets)
     cta_line = build_channel_cta(channel_id)
     tags = build_hashtags(item, title)
-    lines = [f"<b>{escape_text(title)}</b>"]
+    headline = build_headline(item, title)
+    lines = [headline]
 
     for paragraph in paragraphs[:max(1, max_bullets + 1)]:
         lines.extend(["", emphasize_paragraph(paragraph)])
@@ -976,6 +982,8 @@ def neutralize_headline(text: str) -> str:
 
 def neutralize_text(text: str) -> str:
     cleaned = text.strip()
+    cleaned = SUMMARY_ARTIFACT_RE.sub(" ", cleaned)
+    cleaned = EMPTY_PARENS_RE.sub(" ", cleaned)
     for target, replacement in CLICKBAIT_REPLACEMENTS:
         cleaned = re.sub(rf"\b{re.escape(target)}\b", replacement, cleaned, flags=re.IGNORECASE)
 
@@ -987,6 +995,13 @@ def neutralize_text(text: str) -> str:
         return "Автомобильная новость"
 
     return cleaned[0].upper() + cleaned[1:]
+
+
+def build_headline(item: CandidateItem, title: str) -> str:
+    emoji = TOPIC_EMOJIS.get(item.topic, "")
+    if emoji:
+        return f"<b>{escape_text(emoji)} {escape_text(title)}</b>"
+    return f"<b>{escape_text(title)}</b>"
 
 
 def truncate_story_text(text: str, limit: int) -> str:
