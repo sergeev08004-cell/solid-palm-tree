@@ -877,14 +877,10 @@ def build_hashtags(item: CandidateItem, title: str) -> list[str]:
     if topic_tag not in tags:
         tags.append(topic_tag)
 
-    source_tag = SOURCE_TAGS.get(item.source_group)
-    if source_tag and source_tag not in tags:
-        tags.append(source_tag)
-
-    if "Автоновости" not in tags and len(tags) < 4:
+    if "Автоновости" not in tags and len(tags) < 3:
         tags.append("Автоновости")
 
-    return tags[:4]
+    return tags[:3]
 
 
 def extract_model_hashtag(text: str) -> str:
