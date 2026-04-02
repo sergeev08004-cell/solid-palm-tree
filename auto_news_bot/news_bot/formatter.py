@@ -336,9 +336,9 @@ def format_post(item: CandidateItem, channel_id: str = "") -> str:
     return _format_post(
         item,
         channel_id=channel_id,
-        summary_limit=520,
+        summary_limit=2200,
         max_length=4096,
-        max_bullets=3,
+        max_bullets=5,
         include_spoiler=True
     )
 
@@ -347,9 +347,9 @@ def format_caption(item: CandidateItem, channel_id: str = "") -> str:
     return _format_post(
         item,
         channel_id=channel_id,
-        summary_limit=280,
+        summary_limit=900,
         max_length=1024,
-        max_bullets=2,
+        max_bullets=3,
         include_spoiler=False
     )
 
@@ -363,7 +363,7 @@ def _format_post(
     include_spoiler: bool
 ) -> str:
     title = neutralize_headline(item.title)
-    summary = truncate(neutralize_text(item.summary), summary_limit)
+    summary = truncate_story_text(item.summary, summary_limit)
     paragraphs = build_reference_paragraphs(item, title, summary, max_paragraphs=max_bullets + 1)
     price_block = build_price_block(item, title, summary, max_lines=max_bullets)
     cta_line = build_channel_cta(channel_id)
@@ -443,23 +443,30 @@ def build_reference_paragraphs(item: CandidateItem, title: str, summary: str, ma
 
 
 def group_story_sentences(summary: str, max_paragraphs: int) -> list[str]:
-    sentences = [neutralize_text(part) for part in SUMMARY_SPLIT_RE.split(summary) if part.strip()]
-    if not sentences:
-        return []
-
     paragraphs: list[str] = []
-    current: list[str] = []
-    for sentence in sentences:
-        if current and (len(" ".join(current + [sentence])) > 220 or len(current) >= 2):
+    raw_paragraphs = [part.strip() for part in re.split(r"\n{2,}", summary) if part.strip()]
+    if not raw_paragraphs:
+        raw_paragraphs = [summary]
+
+    for raw_paragraph in raw_paragraphs:
+        sentences = [neutralize_text(part) for part in SUMMARY_SPLIT_RE.split(raw_paragraph) if part.strip()]
+        if not sentences:
+            continue
+
+        current: list[str] = []
+        for sentence in sentences:
+            if current and (len(" ".join(current + [sentence])) > 220 or len(current) >= 2):
+                paragraphs.append(" ".join(current))
+                current = [sentence]
+            else:
+                current.append(sentence)
+            if len(paragraphs) >= max_paragraphs:
+                break
+
+        if current and len(paragraphs) < max_paragraphs:
             paragraphs.append(" ".join(current))
-            current = [sentence]
-        else:
-            current.append(sentence)
         if len(paragraphs) >= max_paragraphs:
             break
-
-    if current and len(paragraphs) < max_paragraphs:
-        paragraphs.append(" ".join(current))
 
     return paragraphs[:max_paragraphs]
 
@@ -955,6 +962,33 @@ def neutralize_text(text: str) -> str:
         return "Автомобильная новость"
 
     return cleaned[0].upper() + cleaned[1:]
+
+
+def truncate_story_text(text: str, limit: int) -> str:
+    normalized = normalize_story_text(text)
+    if len(normalized) <= limit:
+        return normalized
+
+    snippet = normalized[:limit].rsplit(" ", 1)[0].strip()
+    if not snippet:
+        snippet = normalized[:limit].strip()
+    return f"{snippet}..."
+
+
+def normalize_story_text(text: str) -> str:
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+
+    paragraphs = [part.strip() for part in re.split(r"\n{2,}", raw) if part.strip()]
+    if not paragraphs:
+        paragraphs = [raw]
+
+    normalized: list[str] = []
+    for paragraph in paragraphs:
+        normalized.append(neutralize_text(paragraph))
+
+    return "\n\n".join(normalized)
 
 
 def format_russian_date(value) -> str:

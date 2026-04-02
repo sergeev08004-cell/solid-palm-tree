@@ -14,7 +14,7 @@ META_IMAGE_RE = re.compile(
 )
 IMG_SRC_RE = re.compile(r"<img[^>]+src=[\"']([^\"']+)[\"']", re.IGNORECASE)
 NOISY_IMAGE_RE = re.compile(
-    r"(logo|icon|sprite|avatar|favicon|banner-ad|analytics|counter|pixel|beacon|tracker|flag|promo|topline|placeholder)",
+    r"(logo|icon|sprite|avatar|favicon|banner-ad|analytics|counter|pixel|beacon|tracker|flag|promo|topline|placeholder|thumbnail)",
     re.IGNORECASE
 )
 TRACKING_IMAGE_HOSTS = {
@@ -101,8 +101,15 @@ def is_noisy_image(url: str) -> bool:
     if path.endswith(".svg"):
         return True
 
+    if "/thumb/" in path or "/thumbnail/" in path:
+        return True
+
+    file_name = path.rsplit("/", 1)[-1]
+    if file_name.startswith("tn_"):
+        return True
+
     noise_haystack = f"{path}?{query}"
-    if any(token in noise_haystack for token in ("pixel", "counter", "beacon", "analytics", "metric", "promo", "topline", "flag")):
+    if any(token in noise_haystack for token in ("pixel", "counter", "beacon", "analytics", "metric", "promo", "topline", "flag", "thumb")):
         return True
 
     return False

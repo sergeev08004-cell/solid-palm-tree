@@ -8,6 +8,7 @@ from pathlib import Path
 
 from news_bot.config import load_config
 from news_bot.formatter import detect_brand_label, format_caption, format_post
+from news_bot.page_content import fetch_page_story
 from news_bot.page_images import fetch_page_images
 from news_bot.ranking import rank_candidates
 from news_bot.storage import Storage
@@ -55,6 +56,7 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
                 print("[cycle] publish gap active, postponing remaining items")
             break
 
+        item = enrich_item_content(item, config, verbose=verbose)
         item, image_urls = enrich_item_images(item, config, verbose=verbose)
         item = localize_item(item, translator, verbose=verbose)
         message = format_post(item, config.telegram.channel_id)
@@ -131,7 +133,7 @@ def enrich_item_images(item, config, verbose: bool = False):
         images.append(item.image_url)
 
     try:
-        page_images = fetch_page_images(item.url, config, limit=4)
+        page_images = fetch_page_images(item.url, config, limit=6)
     except Exception as error:
         if verbose:
             print(f"[image] source={item.source_name} error={error}")
@@ -154,6 +156,74 @@ def enrich_item_images(item, config, verbose: bool = False):
         return item, images
 
     return replace(item, image_url=primary_image), images
+
+
+def enrich_item_content(item, config, verbose: bool = False):
+    try:
+        page_story = fetch_page_story(item.url, config, max_paragraphs=6)
+    except Exception as error:
+        if verbose:
+            print(f"[content] source={item.source_name} error={error}")
+        return item
+
+    if not page_story:
+        return item
+
+    current_summary = (item.summary or "").strip()
+    if len(page_story) <= len(current_summary):
+        return item
+
+    merged_parts = []
+    title_normalized = normalize_merge_text(item.title)
+    existing_norms: list[str] = []
+    if current_summary:
+        current_normalized = normalize_merge_text(current_summary)
+        if current_normalized and current_normalized not in normalize_merge_text(page_story):
+            merged_parts.append(current_summary)
+            existing_norms.append(current_normalized)
+
+    for paragraph in page_story.split("\n\n"):
+        cleaned = paragraph.strip()
+        if not cleaned:
+            continue
+        normalized = normalize_merge_text(cleaned)
+        if not normalized:
+            continue
+        if title_normalized and normalized.startswith(title_normalized) and len(normalized) <= len(title_normalized) + 220:
+            continue
+        if any(
+            (normalized in existing or existing in normalized) and min(len(normalized), len(existing)) >= 80
+            for existing in existing_norms
+        ):
+            continue
+        merged_parts.append(cleaned)
+        existing_norms.append(normalized)
+
+    merged_summary = "\n\n".join(merge_short_paragraphs(merged_parts)).strip()
+    if not merged_summary:
+        return item
+
+    if verbose:
+        print(f"[content] source={item.source_name} summary={len(current_summary)} enriched={len(merged_summary)}")
+
+    return replace(item, summary=merged_summary)
+
+
+def normalize_merge_text(value: str) -> str:
+    return " ".join((value or "").lower().split())
+
+
+def merge_short_paragraphs(paragraphs: list[str]) -> list[str]:
+    merged: list[str] = []
+    for paragraph in paragraphs:
+        cleaned = paragraph.strip()
+        if not cleaned:
+            continue
+        if merged and len(cleaned) < 65:
+            merged[-1] = f"{merged[-1]} {cleaned}".strip()
+            continue
+        merged.append(cleaned)
+    return merged
 
 
 def main() -> int:
