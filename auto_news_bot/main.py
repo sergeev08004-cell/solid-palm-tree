@@ -57,8 +57,8 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
 
         item, image_urls = enrich_item_images(item, config, verbose=verbose)
         item = localize_item(item, translator, verbose=verbose)
-        message = format_post(item)
-        caption = format_caption(item)
+        message = format_post(item, config.telegram.channel_id)
+        caption = format_caption(item, config.telegram.channel_id)
         album_label = detect_brand_label(item)
         if dry_run:
             print("=" * 72)

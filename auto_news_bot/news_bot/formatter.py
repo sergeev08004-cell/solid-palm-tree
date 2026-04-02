@@ -12,6 +12,14 @@ MULTI_PUNCTUATION_RE = re.compile(r"[!?]+")
 EXTRA_SPACE_RE = re.compile(r"\s+")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
 HASHTAG_CLEAN_RE = re.compile(r"[^0-9A-Za-zА-Яа-яЁё]+")
+PRICE_VALUE_RE = re.compile(
+    r"((?:от|from)?\s*(?:[$€£¥₽₸]\s?\d[\d\s.,]*(?:\s?(?:k|m))?|\d[\d\s.,]*(?:\s?(?:тыс\.?|млн|k|m|million))?\s*"
+    r"(?:руб(?:лей|ля|\.?)|₽|usd|доллар(?:ов|а)?|eur|евро|€|£|фунт(?:ов|а)?|тенге|₸|yuan|юан(?:ей|я)?|¥)))",
+    re.IGNORECASE
+)
+SUMMARY_SPLIT_RE = re.compile(
+    r"(?<=[.!?])\s+|(?<=[а-яё0-9])\s+(?=(?:В|На|По|Для|Однако|Также|Компания|В компании|Новинку|Новый|Это|При этом)\b)"
+)
 CLICKBAIT_REPLACEMENTS = (
     ("сенсация", ""),
     ("шок", ""),
@@ -324,9 +332,10 @@ MODEL_MENTION_RE = re.compile(
 )
 
 
-def format_post(item: CandidateItem) -> str:
+def format_post(item: CandidateItem, channel_id: str = "") -> str:
     return _format_post(
         item,
+        channel_id=channel_id,
         summary_limit=520,
         max_length=4096,
         max_bullets=3,
@@ -334,9 +343,10 @@ def format_post(item: CandidateItem) -> str:
     )
 
 
-def format_caption(item: CandidateItem) -> str:
+def format_caption(item: CandidateItem, channel_id: str = "") -> str:
     return _format_post(
         item,
+        channel_id=channel_id,
         summary_limit=280,
         max_length=1024,
         max_bullets=2,
@@ -346,6 +356,7 @@ def format_caption(item: CandidateItem) -> str:
 
 def _format_post(
     item: CandidateItem,
+    channel_id: str,
     summary_limit: int,
     max_length: int,
     max_bullets: int,
@@ -353,157 +364,128 @@ def _format_post(
 ) -> str:
     title = neutralize_headline(item.title)
     summary = truncate(neutralize_text(item.summary), summary_limit)
-    published = format_russian_date(item.published_at_utc.astimezone(timezone.utc))
-    emoji = TOPIC_EMOJIS.get(item.topic, "📰")
-
-    model_specs = extract_model_spec_lines(item, title, summary, max_models=max_bullets + 1)
-    lead, bullets = build_story_blocks(summary, max_bullets=max_bullets, skip_model_sentences=bool(model_specs))
-    specs = [] if model_specs else extract_spec_highlights(item, title, summary, max_specs=max_bullets + 1)
+    paragraphs = build_reference_paragraphs(item, title, summary, max_paragraphs=max_bullets + 1)
     price_block = build_price_block(item, title, summary, max_lines=max_bullets)
-    tags = build_hashtags(item, title)
-    lines = [f"<b>{emoji} {escape_text(title)}</b>"]
+    cta_line = build_channel_cta(channel_id)
+    lines = [f"<b>{escape_text(title)}</b>"]
 
-    if lead:
-        lines.extend(
-            [
-                "",
-                f"<i>{escape_text(lead)}</i>"
-            ]
-        )
-
-    if model_specs:
-        lines.extend(
-            [
-                "",
-                "<b>По моделям:</b>"
-            ]
-        )
-        lines.extend(f"• {escape_text(spec)}" for spec in model_specs)
-    elif specs:
-        lines.extend(
-            [
-                "",
-                "<b>Характеристики авто:</b>"
-            ]
-        )
-        lines.extend(f"• {escape_text(spec)}" for spec in specs)
-
-    if bullets:
-        lines.extend(
-            [
-                "",
-                "<b>Что известно:</b>"
-            ]
-        )
-        lines.extend(f"• {escape_text(bullet)}" for bullet in bullets)
-    elif summary and summary.lower() != lead.lower() and not (specs or model_specs):
-        lines.extend(
-            [
-                "",
-                escape_text(summary)
-            ]
-        )
-    elif not summary:
-        lines.extend(
-            [
-                "",
-                "Опубликован новый материал по автомобильной теме."
-            ]
-        )
-
-    if item.duplicate_count > 1:
-        lines.extend(
-            [
-                "",
-                f"📌 <i>Сюжет подтвержден {item.duplicate_count} источниками</i>"
-            ]
-        )
-
-    lines.extend(
-        [
-            "",
-            f"📰 <b>Источник:</b> {escape_text(item.source_name)}",
-            f"🕒 <i>{escape_text(published)}</i>",
-            f"🔗 <a href=\"{escape_attr(item.url)}\">Читать полностью</a>"
-        ]
-    )
-
-    if include_spoiler:
-        original_label = source_label(item)
-        lines.extend(
-            [
-                "",
-                f"<tg-spoiler>Оригинал: {escape_text(original_label)}</tg-spoiler>"
-            ]
-        )
+    for paragraph in paragraphs[:max(1, max_bullets + 1)]:
+        lines.extend(["", emphasize_paragraph(paragraph)])
 
     if price_block:
-        lines.extend(["", price_block[0]])
-        lines.extend(f"• {escape_text(line)}" for line in price_block[1:])
+        price_lines = price_block[1:] if len(price_block) > 1 else [price_block[0].split(": ", 1)[-1]]
+        if price_lines:
+            lines.extend(["", emphasize_paragraph(f"Цена: {price_lines[0]}")])
 
-    if tags:
-        lines.extend(
-            [
-                "",
-                " ".join(f"#{tag}" for tag in tags)
-            ]
-        )
+    if item.duplicate_count > 1:
+        lines.extend(["", f"<b>Сюжет подтвержден {item.duplicate_count} источниками.</b>"])
+
+    if cta_line:
+        lines.extend(["", cta_line])
 
     text = "\n".join(lines).strip()
     if len(text) <= max_length:
         return text
 
-    trimmed_bullets = bullets[: max(1, max_bullets - 1)]
-    fallback_lines = [f"<b>{emoji} {escape_text(title)}</b>"]
-    if lead:
-        fallback_lines.extend(
-            [
-                "",
-                f"<i>{escape_text(truncate(lead, 180))}</i>"
-            ]
-        )
-    trimmed_model_specs = model_specs[:2]
-    if trimmed_model_specs:
-        fallback_lines.extend(
-            [
-                "",
-                "<b>По моделям:</b>"
-            ]
-        )
-        fallback_lines.extend(f"• {escape_text(truncate(spec, 120))}" for spec in trimmed_model_specs)
-    if trimmed_bullets:
-        fallback_lines.extend(
-            [
-                "",
-                "<b>Что известно:</b>"
-            ]
-        )
-        fallback_lines.extend(f"• {escape_text(truncate(bullet, 140))}" for bullet in trimmed_bullets)
-    trimmed_specs = specs[:2]
-    if trimmed_specs:
-        fallback_lines.extend(
-            [
-                "",
-                "<b>Характеристики:</b>"
-            ]
-        )
-        fallback_lines.extend(f"• {escape_text(truncate(spec, 90))}" for spec in trimmed_specs)
-
-    fallback_lines.extend(
-        [
-            "",
-            f"📰 <b>Источник:</b> {escape_text(item.source_name)}",
-            f"🕒 <i>{escape_text(published)}</i>",
-            f"🔗 <a href=\"{escape_attr(item.url)}\">Читать полностью</a>"
-        ]
-    )
+    fallback_lines = [f"<b>{escape_text(title)}</b>"]
+    for paragraph in paragraphs[:max(1, max_bullets)]:
+        fallback_lines.extend(["", emphasize_paragraph(truncate(paragraph, 190))])
     if price_block:
-        fallback_lines.extend(["", price_block[0]])
-        fallback_lines.extend(f"• {escape_text(truncate(line, 70))}" for line in price_block[1:3])
-    if tags:
-        fallback_lines.extend(["", " ".join(f"#{tag}" for tag in tags[:3])])
+        price_lines = price_block[1:] if len(price_block) > 1 else [price_block[0].split(": ", 1)[-1]]
+        if price_lines:
+            fallback_lines.extend(["", emphasize_paragraph(truncate(f"Цена: {price_lines[0]}", 110))])
+    if cta_line:
+        fallback_lines.extend(["", cta_line])
 
     return truncate("\n".join(fallback_lines).strip(), max_length)
+
+
+def build_reference_paragraphs(item: CandidateItem, title: str, summary: str, max_paragraphs: int) -> list[str]:
+    paragraphs: list[str] = []
+    model_specs = extract_model_spec_lines(item, title, summary, max_models=2)
+    specs = [] if model_specs else extract_spec_highlights(item, title, summary, max_specs=3)
+
+    if model_specs:
+        paragraphs.extend(model_specs[:2])
+    elif specs:
+        paragraphs.append(", ".join(specs[:3]))
+
+    if summary:
+        paragraphs.extend(group_story_sentences(summary, max_paragraphs=max_paragraphs))
+
+    unique: list[str] = []
+    seen: set[str] = set()
+    title_key = title.lower().strip(" .")
+    for paragraph in paragraphs:
+        clean = paragraph.strip()
+        if not clean:
+            continue
+        if clean.lower().strip(" .") == title_key:
+            continue
+        key = clean.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(clean)
+        if len(unique) >= max_paragraphs:
+            break
+
+    if not unique:
+        unique.append("Новый материал по автомобильной теме уже появился в ленте канала.")
+
+    return unique
+
+
+def group_story_sentences(summary: str, max_paragraphs: int) -> list[str]:
+    sentences = [neutralize_text(part) for part in SUMMARY_SPLIT_RE.split(summary) if part.strip()]
+    if not sentences:
+        return []
+
+    paragraphs: list[str] = []
+    current: list[str] = []
+    for sentence in sentences:
+        if current and (len(" ".join(current + [sentence])) > 220 or len(current) >= 2):
+            paragraphs.append(" ".join(current))
+            current = [sentence]
+        else:
+            current.append(sentence)
+        if len(paragraphs) >= max_paragraphs:
+            break
+
+    if current and len(paragraphs) < max_paragraphs:
+        paragraphs.append(" ".join(current))
+
+    return paragraphs[:max_paragraphs]
+
+
+def emphasize_paragraph(text: str) -> str:
+    escaped = escape_text(text)
+    escaped = PRICE_VALUE_RE.sub(r"<b>\1</b>", escaped)
+    for phrase in (
+        "автопилот",
+        "быстрая зарядка",
+        "адаптивная подвеска",
+        "полный привод",
+        "мультимедиа",
+        "экосистема",
+        "carplay",
+        "android auto",
+        "запас хода",
+    ):
+        escaped = re.sub(
+            rf"\b({re.escape(phrase)})\b",
+            r"<b>\1</b>",
+            escaped,
+            flags=re.IGNORECASE
+        )
+    return escaped
+
+
+def build_channel_cta(channel_id: str) -> str:
+    if not channel_id.startswith("@"):
+        return ""
+    handle = channel_id.lstrip("@")
+    return f"👉 <a href=\"https://t.me/{escape_attr(handle)}\">{escape_text(channel_id)}. Подписаться</a>"
 
 
 def build_story_blocks(summary: str, max_bullets: int, skip_model_sentences: bool = False) -> tuple[str, list[str]]:
