@@ -128,7 +128,7 @@ def load_config(path: Path) -> AppConfig:
         request_timeout_seconds=int(payload.get("request_timeout_seconds", 20)),
         database_path=str(payload.get("database_path", "data/news.db")),
         user_agent=str(payload.get("user_agent", "AutoNewsBot/1.0")),
-        publication_title=str(payload.get("publication_title", "Мировые автоновости")),
+        publication_title=str(payload.get("publication_title", "")),
         sources=sources,
         priority_topics=list(payload.get("priority_topics", [])),
         blocked_keywords=[item.lower() for item in payload.get("blocked_keywords", [])],

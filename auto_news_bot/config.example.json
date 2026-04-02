@@ -13,7 +13,7 @@
   "request_timeout_seconds": 20,
   "database_path": "data/news.db",
   "user_agent": "AutoNewsBot/1.0 (+https://t.me/your_channel_name)",
-  "publication_title": "Мировые автоновости",
+  "publication_title": "",
   "translation": {
     "enabled": true,
     "provider": "google_web",

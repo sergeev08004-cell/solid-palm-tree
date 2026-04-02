@@ -31,7 +31,7 @@ def main() -> int:
 
     bot_token = getenv_required("TELEGRAM_BOT_TOKEN")
     channel_id = getenv_required("TELEGRAM_CHANNEL_ID")
-    publication_title = os.environ.get("AUTO_NEWS_PUBLICATION_TITLE", "Мировые автоновости").strip()
+    publication_title = os.environ.get("AUTO_NEWS_PUBLICATION_TITLE", "").strip()
     if channel_id.startswith("@"):
         user_agent = f"AutoNewsBot/1.0 (+https://t.me/{channel_id.lstrip('@')})"
     else:

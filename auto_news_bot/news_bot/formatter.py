@@ -324,10 +324,9 @@ MODEL_MENTION_RE = re.compile(
 )
 
 
-def format_post(item: CandidateItem, publication_title: str) -> str:
+def format_post(item: CandidateItem) -> str:
     return _format_post(
         item,
-        publication_title=publication_title,
         summary_limit=520,
         max_length=4096,
         max_bullets=3,
@@ -335,10 +334,9 @@ def format_post(item: CandidateItem, publication_title: str) -> str:
     )
 
 
-def format_caption(item: CandidateItem, publication_title: str) -> str:
+def format_caption(item: CandidateItem) -> str:
     return _format_post(
         item,
-        publication_title=publication_title,
         summary_limit=280,
         max_length=1024,
         max_bullets=2,
@@ -348,7 +346,6 @@ def format_caption(item: CandidateItem, publication_title: str) -> str:
 
 def _format_post(
     item: CandidateItem,
-    publication_title: str,
     summary_limit: int,
     max_length: int,
     max_bullets: int,
