@@ -110,6 +110,7 @@ class CollectedItem:
     published_at: datetime
     fingerprint: str
     tokens: List[str]
+    video_url: str = ""
 
 
 def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = False) -> List[CollectedItem]:
@@ -159,7 +160,8 @@ def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = Fals
                     image_url=entry.image_url,
                     published_at=entry.published_at,
                     fingerprint=fingerprint,
-                    tokens=tokens
+                    tokens=tokens,
+                    video_url=entry.video_url
                 )
             )
 

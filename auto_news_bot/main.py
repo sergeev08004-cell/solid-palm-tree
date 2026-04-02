@@ -9,7 +9,7 @@ from pathlib import Path
 from news_bot.config import load_config
 from news_bot.formatter import detect_brand_label, format_caption, format_post
 from news_bot.page_content import fetch_page_story
-from news_bot.page_images import fetch_page_images
+from news_bot.page_images import fetch_page_images, fetch_page_videos
 from news_bot.ranking import rank_candidates
 from news_bot.storage import Storage
 from news_bot.telegram_api import TelegramPublisher
@@ -57,14 +57,21 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
             break
 
         item = enrich_item_content(item, config, verbose=verbose)
-        item, image_urls = enrich_item_images(item, config, verbose=verbose)
+        item, image_urls, video_url = enrich_item_media(item, config, verbose=verbose)
         item = localize_item(item, translator, verbose=verbose)
+        if not video_url and not image_urls:
+            if verbose:
+                print(f"[media] source={item.source_name} skipped: no video or photo")
+            continue
         message = format_post(item, config.telegram.channel_id)
         caption = format_caption(item, config.telegram.channel_id)
         album_label = detect_brand_label(item)
         if dry_run:
             print("=" * 72)
             print(message)
+            if video_url:
+                print("")
+                print(f"Видео: {video_url}")
             if image_urls:
                 print("")
                 for index, image_url in enumerate(image_urls, start=1):
@@ -76,6 +83,7 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
             try:
                 publisher.publish(
                     message,
+                    video_url=video_url,
                     image_url=item.image_url,
                     image_urls=image_urls,
                     caption=caption,
@@ -127,35 +135,46 @@ def localize_item(item, translator: Translator, verbose: bool = False):
     )
 
 
-def enrich_item_images(item, config, verbose: bool = False):
+def enrich_item_media(item, config, verbose: bool = False):
     images = []
     if item.image_url:
         images.append(item.image_url)
+    videos = []
+    if item.video_url:
+        videos.append(item.video_url)
+
+    try:
+        page_videos = fetch_page_videos(item.url, config, limit=2)
+    except Exception as error:
+        if verbose:
+            print(f"[video] source={item.source_name} error={error}")
+        page_videos = []
+
+    for video_url in page_videos:
+        if video_url not in videos:
+            videos.append(video_url)
 
     try:
         page_images = fetch_page_images(item.url, config, limit=6)
     except Exception as error:
         if verbose:
             print(f"[image] source={item.source_name} error={error}")
-        return item, images
+        page_images = []
 
     for image_url in page_images:
         if image_url not in images:
             images.append(image_url)
 
-    if not images:
-        if verbose:
-            print(f"[image] source={item.source_name} no image found for {item.url}")
-        return item, []
+    primary_video = videos[0] if videos else item.video_url
+    primary_image = images[0] if images else item.image_url
 
     if verbose:
-        print(f"[image] source={item.source_name} images={len(images)} first={images[0]}")
+        if primary_video:
+            print(f"[video] source={item.source_name} videos={len(videos)} first={primary_video}")
+        if primary_image:
+            print(f"[image] source={item.source_name} images={len(images)} first={primary_image}")
 
-    primary_image = images[0]
-    if item.image_url == primary_image:
-        return item, images
-
-    return replace(item, image_url=primary_image), images
+    return replace(item, image_url=primary_image, video_url=primary_video), images, primary_video
 
 
 def enrich_item_content(item, config, verbose: bool = False):

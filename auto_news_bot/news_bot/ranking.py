@@ -16,6 +16,26 @@ if TYPE_CHECKING:
 
 
 TOPIC_RULES = {
+    "accidents": {
+        "label": "ДТП и аварии",
+        "weight": 3.15,
+        "keywords": [
+            "дтп",
+            "авари",
+            "столкнов",
+            "наезд",
+            "перевернул",
+            "crash",
+            "collision",
+            "pileup",
+            "pile-up",
+            "wreck",
+            "road accident",
+            "traffic accident",
+            "fatal crash",
+            "highway incident"
+        ]
+    },
     "recalls": {
         "label": "Отзывная кампания",
         "weight": 2.6,
@@ -202,7 +222,8 @@ def rank_candidates(
                 score=round(score, 3),
                 duplicate_count=len(group),
                 fingerprint=best.fingerprint,
-                similar_urls=[item.url for item in group]
+                similar_urls=[item.url for item in group],
+                video_url=best.video_url
             )
         )
 
@@ -248,7 +269,7 @@ def detect_topic(text: str) -> Tuple[str, str, float]:
     has_gadget_keywords = any(keyword in lowered for keyword in TOPIC_RULES["gadgets"]["keywords"])
     has_vehicle_hints = any(keyword in lowered for keyword in VEHICLE_HINT_KEYWORDS)
 
-    for topic in ("recalls", "law", "prices", "sales", "production"):
+    for topic in ("accidents", "recalls", "law", "prices", "sales", "production"):
         rule = TOPIC_RULES[topic]
         if any(keyword in lowered for keyword in rule["keywords"]):
             return topic, rule["label"], float(rule["weight"])

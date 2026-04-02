@@ -52,6 +52,7 @@ RUSSIAN_MONTHS = {
     12: "декабря"
 }
 TOPIC_EMOJIS = {
+    "accidents": "🚨",
     "recalls": "⚠️",
     "law": "📜",
     "new_models": "🚗",
@@ -65,6 +66,7 @@ TOPIC_EMOJIS = {
     "industry": "🌍"
 }
 TOPIC_HASHTAGS = {
+    "accidents": "ДТП",
     "recalls": "Отзыв",
     "law": "Регулирование",
     "new_models": "НоваяМодель",

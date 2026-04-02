@@ -22,6 +22,7 @@ class CandidateItem:
     duplicate_count: int
     fingerprint: str
     similar_urls: List[str]
+    video_url: str = ""
 
     @property
     def published_at_utc(self) -> datetime:
