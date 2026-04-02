@@ -863,22 +863,32 @@ def normalize_unit(value: str) -> str:
 
 
 def build_hashtags(item: CandidateItem, title: str) -> list[str]:
-    haystack = f"{title} {item.summary} {item.source_name}".lower()
+    title_haystack = f"{title} {item.title}".lower()
+    summary_haystack = f"{item.summary} {item.source_name}".lower()
+    haystack = f"{title_haystack} {summary_haystack}"
     tags: list[str] = []
 
     for phrase, tag in BRAND_TAGS:
-        if phrase in haystack and tag not in tags:
+        if phrase_in_text(title_haystack, phrase) and tag not in tags:
             tags.append(tag)
         if len(tags) >= 2:
             break
+
+    if not tags:
+        for phrase, tag in BRAND_TAGS:
+            if phrase_in_text(summary_haystack, phrase) and tag not in tags:
+                tags.append(tag)
+            if len(tags) >= 2:
+                break
 
     model_tag = extract_model_hashtag(f"{title}. {item.summary}")
     if model_tag and model_tag not in tags:
         tags.append(model_tag)
 
-    gadget_tag = detect_gadget_hashtag(haystack)
-    if gadget_tag and gadget_tag not in tags:
-        tags.append(gadget_tag)
+    if item.topic in {"gadgets", "technology"}:
+        gadget_tag = detect_gadget_hashtag(haystack)
+        if gadget_tag and gadget_tag not in tags:
+            tags.append(gadget_tag)
 
     topic_tag = TOPIC_HASHTAGS.get(item.topic, "Автоновости")
     if topic_tag not in tags:
@@ -905,6 +915,16 @@ def detect_gadget_hashtag(haystack: str) -> str:
     return ""
 
 
+def phrase_in_text(haystack: str, phrase: str) -> bool:
+    if not phrase:
+        return False
+    if not re.search(r"[0-9A-Za-zА-Яа-яЁё]", phrase):
+        return phrase in haystack
+
+    pattern = rf"(?<![0-9A-Za-zА-Яа-яЁё]){re.escape(phrase)}(?![0-9A-Za-zА-Яа-яЁё])"
+    return re.search(pattern, haystack) is not None
+
+
 def sanitize_hashtag(value: str, max_length: int = 32) -> str:
     cleaned = HASHTAG_CLEAN_RE.sub("", value)
     cleaned = cleaned[:max_length]
@@ -916,10 +936,15 @@ def sanitize_hashtag(value: str, max_length: int = 32) -> str:
 
 
 def detect_brand_label(item: CandidateItem, title: str = "") -> str:
-    haystack = f"{title} {item.title} {item.summary} {item.source_name}".lower()
+    title_haystack = f"{title} {item.title}".lower()
+    summary_haystack = f"{item.summary} {item.source_name}".lower()
 
     for phrase, tag in BRAND_TAGS:
-        if phrase in haystack:
+        if phrase_in_text(title_haystack, phrase):
+            return tag
+
+    for phrase, tag in BRAND_TAGS:
+        if phrase_in_text(summary_haystack, phrase):
             return tag
 
     source_tag = SOURCE_TAGS.get(item.source_group)

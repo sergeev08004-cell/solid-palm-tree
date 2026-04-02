@@ -185,7 +185,17 @@ def is_same_story(left: CollectedItem, right: CollectedItem) -> bool:
 def detect_topic(text: str) -> Tuple[str, str, float]:
     lowered = text.lower()
 
-    for topic, rule in TOPIC_RULES.items():
+    for topic in ("recalls", "law", "new_models", "prices", "sales", "production"):
+        rule = TOPIC_RULES[topic]
+        if any(keyword in lowered for keyword in rule["keywords"]):
+            return topic, rule["label"], float(rule["weight"])
+
+    gadget_rule = TOPIC_RULES["gadgets"]
+    if any(keyword in lowered for keyword in gadget_rule["keywords"]):
+        return "gadgets", gadget_rule["label"], float(gadget_rule["weight"])
+
+    for topic in ("electric", "technology"):
+        rule = TOPIC_RULES[topic]
         if any(keyword in lowered for keyword in rule["keywords"]):
             return topic, rule["label"], float(rule["weight"])
 
