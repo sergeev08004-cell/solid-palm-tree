@@ -65,12 +65,44 @@ TOPIC_RULES = {
             "android auto",
             "infotainment",
             "видеорегистратор",
+            "регистратор",
             "навигатор",
             "магнитол",
             "мультимедиа",
             "радар-детектор",
+            "tpms",
+            "head-up",
+            "hud",
+            "blackbox",
+            "black box",
+            "intercom",
+            "helmet cam",
+            "шлем",
             "зарядное устройство",
             "зарядный коврик"
+        ]
+    },
+    "tips": {
+        "label": "Лайфхаки",
+        "weight": 2.5,
+        "keywords": [
+            "лайфхак",
+            "совет",
+            "советы",
+            "как правильно",
+            "как выбрать",
+            "как подготовить",
+            "что делать",
+            "почему нельзя",
+            "как продлить",
+            "уход",
+            "обслуживан",
+            "maintenance",
+            "checklist",
+            "how to",
+            "ownership tips",
+            "winter prep",
+            "summer prep"
         ]
     },
     "technology": {
@@ -87,11 +119,40 @@ TOPIC_RULES = {
             "telematics",
             "mapping",
             "maps",
-            "navigation software"
+            "navigation software",
+            "robotaxi",
+            "autonomous",
+            "autonomous driving",
+            "driver assistance",
+            "adas",
+            "lidar",
+            "v2x",
+            "connected car",
+            "digital cockpit",
+            "software-defined",
+            "sdv",
+            "ecu",
+            "открывающимися против хода дверями"
         ]
     }
 }
 DEFAULT_TOPIC = ("industry", "Отрасль", 1.7)
+VEHICLE_HINT_KEYWORDS = (
+    "кроссовер",
+    "седан",
+    "купе",
+    "универсал",
+    "внедорожник",
+    "пикап",
+    "минивэн",
+    "suv",
+    "crossover",
+    "sedan",
+    "wagon",
+    "pickup",
+    "hatchback",
+    "truck"
+)
 
 
 def rank_candidates(
@@ -184,14 +245,27 @@ def is_same_story(left: CollectedItem, right: CollectedItem) -> bool:
 
 def detect_topic(text: str) -> Tuple[str, str, float]:
     lowered = text.lower()
+    has_gadget_keywords = any(keyword in lowered for keyword in TOPIC_RULES["gadgets"]["keywords"])
+    has_vehicle_hints = any(keyword in lowered for keyword in VEHICLE_HINT_KEYWORDS)
 
-    for topic in ("recalls", "law", "new_models", "prices", "sales", "production"):
+    for topic in ("recalls", "law", "prices", "sales", "production"):
         rule = TOPIC_RULES[topic]
         if any(keyword in lowered for keyword in rule["keywords"]):
             return topic, rule["label"], float(rule["weight"])
 
+    tips_rule = TOPIC_RULES["tips"]
+    if any(keyword in lowered for keyword in tips_rule["keywords"]):
+        return "tips", tips_rule["label"], float(tips_rule["weight"])
+
     gadget_rule = TOPIC_RULES["gadgets"]
-    if any(keyword in lowered for keyword in gadget_rule["keywords"]):
+    if has_gadget_keywords and not has_vehicle_hints:
+        return "gadgets", gadget_rule["label"], float(gadget_rule["weight"])
+
+    new_models_rule = TOPIC_RULES["new_models"]
+    if any(keyword in lowered for keyword in new_models_rule["keywords"]):
+        return "new_models", new_models_rule["label"], float(new_models_rule["weight"])
+
+    if has_gadget_keywords:
         return "gadgets", gadget_rule["label"], float(gadget_rule["weight"])
 
     for topic in ("electric", "technology"):

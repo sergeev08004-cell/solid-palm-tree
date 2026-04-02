@@ -33,6 +33,67 @@ SOURCE_REQUIRED_KEYWORDS = {
         "rv"
     )
 }
+MOTO_TERMS = (
+    "motorcycle",
+    "motorcycles",
+    "motorbike",
+    "bike",
+    "bikes",
+    "moto",
+    "mototech",
+    "scooter",
+    "scooters",
+    "enduro",
+    "helmet",
+    "helmet cam",
+    "шлем",
+    "мото",
+    "мотоцикл",
+    "мотоциклы",
+    "скутер"
+)
+MOTO_ALLOWED_CONTEXT_KEYWORDS = (
+    "tech",
+    "technology",
+    "software",
+    "gadget",
+    "device",
+    "navigation",
+    "navigator",
+    "dash cam",
+    "dashcam",
+    "camera",
+    "camera system",
+    "intercom",
+    "charger",
+    "charging",
+    "battery",
+    "display",
+    "screen",
+    "helmet cam",
+    "head-up",
+    "hud",
+    "connected",
+    "telematics",
+    "v2x",
+    "autonomous",
+    "ai",
+    "лайфхак",
+    "совет",
+    "обслуживан",
+    "навигац",
+    "регистратор",
+    "видеорегистратор",
+    "экран",
+    "диспле",
+    "камера",
+    "заряд",
+    "батар",
+    "интерком",
+    "автопилот",
+    "технолог",
+    "гаджет"
+)
 
 
 @dataclass(frozen=True)
@@ -78,6 +139,8 @@ def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = Fals
                 continue
             if not source_matches_required_context(entry.source_group, lowered_haystack):
                 continue
+            if not story_matches_editorial_scope(lowered_haystack):
+                continue
 
             tokens = tokens_from_text(f"{entry.title} {entry.summary}")
             if len(tokens) < 4:
@@ -108,3 +171,11 @@ def source_matches_required_context(source_group: str, lowered_haystack: str) ->
     if not required_keywords:
         return True
     return any(keyword in lowered_haystack for keyword in required_keywords)
+
+
+def story_matches_editorial_scope(lowered_haystack: str) -> bool:
+    has_moto_context = any(term in lowered_haystack for term in MOTO_TERMS)
+    if not has_moto_context:
+        return True
+
+    return any(keyword in lowered_haystack for keyword in MOTO_ALLOWED_CONTEXT_KEYWORDS)

@@ -60,6 +60,7 @@ TOPIC_EMOJIS = {
     "production": "🏭",
     "electric": "⚡",
     "gadgets": "🧭",
+    "tips": "🛠️",
     "technology": "🧠",
     "industry": "🌍"
 }
@@ -72,6 +73,7 @@ TOPIC_HASHTAGS = {
     "production": "Производство",
     "electric": "Электрокары",
     "gadgets": "Автогаджеты",
+    "tips": "Лайфхаки",
     "technology": "Технологии",
     "industry": "Автоновости"
 }
@@ -96,7 +98,13 @@ GADGET_HASHTAG_RULES = (
     ("экран", "Дисплеи"),
     ("диспле", "Дисплеи"),
     ("camera", "Автокамеры"),
-    ("камера", "Автокамеры")
+    ("камера", "Автокамеры"),
+    ("tpms", "TPMS"),
+    ("head-up", "HUD"),
+    ("hud", "HUD"),
+    ("intercom", "Интерком"),
+    ("helmet", "Мотогаджеты"),
+    ("шлем", "Мотогаджеты")
 )
 BRAND_TAGS = (
     ("mercedes-benz", "MercedesBenz"),
@@ -170,8 +178,10 @@ GADGET_KEYWORDS = (
     "девайс",
     "аксессуар",
     "видеорегистратор",
+    "регистратор",
     "dashcam",
     "head-up",
+    "hud",
     "head unit",
     "carplay",
     "android auto",
@@ -187,7 +197,12 @@ GADGET_KEYWORDS = (
     "адаптер",
     "навигатор",
     "смарт-зеркал",
-    "smart mirror"
+    "smart mirror",
+    "tpms",
+    "радар-детектор",
+    "intercom",
+    "helmet cam",
+    "шлем"
 )
 MODEL_KEYWORDS = (
     "кроссовер",
