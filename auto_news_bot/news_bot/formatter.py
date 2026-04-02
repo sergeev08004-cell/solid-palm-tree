@@ -11,6 +11,7 @@ from news_bot.models import CandidateItem
 MULTI_PUNCTUATION_RE = re.compile(r"[!?]+")
 EXTRA_SPACE_RE = re.compile(r"\s+")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+HASHTAG_CLEAN_RE = re.compile(r"[^0-9A-Za-zА-Яа-яЁё]+")
 CLICKBAIT_REPLACEMENTS = (
     ("сенсация", ""),
     ("шок", ""),
@@ -61,6 +62,29 @@ TOPIC_HASHTAGS = {
     "technology": "Технологии",
     "industry": "Автоновости"
 }
+GADGET_HASHTAG_RULES = (
+    ("carplay", "CarPlay"),
+    ("android auto", "AndroidAuto"),
+    ("dash cam", "Видеорегистраторы"),
+    ("dashcam", "Видеорегистраторы"),
+    ("видеорегистратор", "Видеорегистраторы"),
+    ("navigator", "Навигаторы"),
+    ("navigation", "Навигация"),
+    ("навигатор", "Навигаторы"),
+    ("head unit", "Мультимедиа"),
+    ("infotainment", "Мультимедиа"),
+    ("мультимедиа", "Мультимедиа"),
+    ("магнитол", "Мультимедиа"),
+    ("charger", "Зарядка"),
+    ("charging pad", "Зарядка"),
+    ("зарядн", "Зарядка"),
+    ("screen", "Дисплеи"),
+    ("display", "Дисплеи"),
+    ("экран", "Дисплеи"),
+    ("диспле", "Дисплеи"),
+    ("camera", "Автокамеры"),
+    ("камера", "Автокамеры")
+)
 BRAND_TAGS = (
     ("mercedes-benz", "MercedesBenz"),
     ("mercedes", "Mercedes"),
@@ -407,14 +431,6 @@ def _format_post(
         ]
     )
 
-    if tags:
-        lines.extend(
-            [
-                "",
-                " ".join(f"#{tag}" for tag in tags)
-            ]
-        )
-
     if include_spoiler:
         original_label = source_label(item)
         lines.extend(
@@ -427,6 +443,14 @@ def _format_post(
     if price_block:
         lines.extend(["", price_block[0]])
         lines.extend(f"• {escape_text(line)}" for line in price_block[1:])
+
+    if tags:
+        lines.extend(
+            [
+                "",
+                " ".join(f"#{tag}" for tag in tags)
+            ]
+        )
 
     text = "\n".join(lines).strip()
     if len(text) <= max_length:
@@ -476,11 +500,11 @@ def _format_post(
             f"🔗 <a href=\"{escape_attr(item.url)}\">Читать полностью</a>"
         ]
     )
-    if tags:
-        fallback_lines.extend(["", " ".join(f"#{tag}" for tag in tags[:2])])
     if price_block:
         fallback_lines.extend(["", price_block[0]])
         fallback_lines.extend(f"• {escape_text(truncate(line, 70))}" for line in price_block[1:3])
+    if tags:
+        fallback_lines.extend(["", " ".join(f"#{tag}" for tag in tags[:3])])
 
     return truncate("\n".join(fallback_lines).strip(), max_length)
 
@@ -856,15 +880,51 @@ def build_hashtags(item: CandidateItem, title: str) -> list[str]:
         if len(tags) >= 2:
             break
 
-    source_tag = SOURCE_TAGS.get(item.source_group)
-    if source_tag and source_tag not in tags:
-        tags.append(source_tag)
+    model_tag = extract_model_hashtag(f"{title}. {item.summary}")
+    if model_tag and model_tag not in tags:
+        tags.append(model_tag)
+
+    gadget_tag = detect_gadget_hashtag(haystack)
+    if gadget_tag and gadget_tag not in tags:
+        tags.append(gadget_tag)
 
     topic_tag = TOPIC_HASHTAGS.get(item.topic, "Автоновости")
     if topic_tag not in tags:
         tags.append(topic_tag)
 
-    return tags[:3]
+    source_tag = SOURCE_TAGS.get(item.source_group)
+    if source_tag and source_tag not in tags:
+        tags.append(source_tag)
+
+    if "Автоновости" not in tags and len(tags) < 4:
+        tags.append("Автоновости")
+
+    return tags[:4]
+
+
+def extract_model_hashtag(text: str) -> str:
+    mentions = extract_model_mentions(text)
+    if not mentions:
+        return ""
+
+    return sanitize_hashtag(mentions[0][0])
+
+
+def detect_gadget_hashtag(haystack: str) -> str:
+    for keyword, tag in GADGET_HASHTAG_RULES:
+        if keyword in haystack:
+            return tag
+    return ""
+
+
+def sanitize_hashtag(value: str, max_length: int = 32) -> str:
+    cleaned = HASHTAG_CLEAN_RE.sub("", value)
+    cleaned = cleaned[:max_length]
+    if not cleaned:
+        return ""
+    if not any(char.isalpha() for char in cleaned):
+        return ""
+    return cleaned
 
 
 def detect_brand_label(item: CandidateItem, title: str = "") -> str:
