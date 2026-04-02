@@ -61,36 +61,39 @@ def _parse_rss(root: ET.Element, source: SourceConfig) -> List[FeedEntry]:
         return items
 
     for node in channel.findall("item"):
-        raw_description = _node_text(node, "description")
-        raw_content = _node_text(node, "{http://purl.org/rss/1.0/modules/content/}encoded")
-        title = clean_text(_node_text(node, "title"))
-        url = clean_text(_node_text(node, "link"))
-        summary = clean_text(
-            raw_description
-            or raw_content
-        )
-        image_url = extract_rss_image(node, raw_description, raw_content, source.url)
-        published_at = parse_datetime(
-            _node_text(node, "pubDate")
-            or _node_text(node, "{http://purl.org/dc/elements/1.1/}date")
-        )
-
-        if not title or not url:
-            continue
-
-        items.append(
-            FeedEntry(
-                source_name=source.name,
-                source_group=source.group,
-                source_language=source.language,
-                source_weight=source.weight,
-                title=title,
-                summary=summary,
-                url=url,
-                image_url=image_url,
-                published_at=published_at
+        try:
+            raw_description = _node_text(node, "description")
+            raw_content = _node_text(node, "{http://purl.org/rss/1.0/modules/content/}encoded")
+            title = clean_text(_node_text(node, "title"))
+            url = clean_text(_node_text(node, "link"))
+            summary = clean_text(
+                raw_description
+                or raw_content
             )
-        )
+            image_url = extract_rss_image(node, raw_description, raw_content, source.url)
+            published_at = parse_datetime(
+                _node_text(node, "pubDate")
+                or _node_text(node, "{http://purl.org/dc/elements/1.1/}date")
+            )
+
+            if not title or not url:
+                continue
+
+            items.append(
+                FeedEntry(
+                    source_name=source.name,
+                    source_group=source.group,
+                    source_language=source.language,
+                    source_weight=source.weight,
+                    title=title,
+                    summary=summary,
+                    url=url,
+                    image_url=image_url,
+                    published_at=published_at
+                )
+            )
+        except Exception:
+            continue
 
     return items
 
@@ -100,48 +103,51 @@ def _parse_atom(root: ET.Element, source: SourceConfig) -> List[FeedEntry]:
     namespace = _namespace(root.tag)
 
     for node in root.findall(f"{{{namespace}}}entry"):
-        raw_summary = _node_text(node, f"{{{namespace}}}summary")
-        raw_content = _node_text(node, f"{{{namespace}}}content")
-        title = clean_text(_node_text(node, f"{{{namespace}}}title"))
-        summary = clean_text(
-            raw_summary
-            or raw_content
-        )
-        published_at = parse_datetime(
-            _node_text(node, f"{{{namespace}}}published")
-            or _node_text(node, f"{{{namespace}}}updated")
-        )
-
-        url = ""
-        image_url = ""
-        for link in node.findall(f"{{{namespace}}}link"):
-            href = clean_text(link.attrib.get("href", ""))
-            relation = link.attrib.get("rel", "alternate")
-            media_type = link.attrib.get("type", "")
-            if href and relation == "alternate":
-                url = href
-            elif href and relation == "enclosure" and is_image_candidate(href, media_type):
-                image_url = absolutize_url(href, source.url)
-
-        if not image_url:
-            image_url = extract_atom_image(node, raw_summary, raw_content, source.url, namespace)
-
-        if not title or not url:
-            continue
-
-        items.append(
-            FeedEntry(
-                source_name=source.name,
-                source_group=source.group,
-                source_language=source.language,
-                source_weight=source.weight,
-                title=title,
-                summary=summary,
-                url=url,
-                image_url=image_url,
-                published_at=published_at
+        try:
+            raw_summary = _node_text(node, f"{{{namespace}}}summary")
+            raw_content = _node_text(node, f"{{{namespace}}}content")
+            title = clean_text(_node_text(node, f"{{{namespace}}}title"))
+            summary = clean_text(
+                raw_summary
+                or raw_content
             )
-        )
+            published_at = parse_datetime(
+                _node_text(node, f"{{{namespace}}}published")
+                or _node_text(node, f"{{{namespace}}}updated")
+            )
+
+            url = ""
+            image_url = ""
+            for link in node.findall(f"{{{namespace}}}link"):
+                href = clean_text(link.attrib.get("href", ""))
+                relation = link.attrib.get("rel", "alternate")
+                media_type = link.attrib.get("type", "")
+                if href and relation == "alternate":
+                    url = href
+                elif href and relation == "enclosure" and is_image_candidate(href, media_type):
+                    image_url = absolutize_url(href, source.url)
+
+            if not image_url:
+                image_url = extract_atom_image(node, raw_summary, raw_content, source.url, namespace)
+
+            if not title or not url:
+                continue
+
+            items.append(
+                FeedEntry(
+                    source_name=source.name,
+                    source_group=source.group,
+                    source_language=source.language,
+                    source_weight=source.weight,
+                    title=title,
+                    summary=summary,
+                    url=url,
+                    image_url=image_url,
+                    published_at=published_at
+                )
+            )
+        except Exception:
+            continue
 
     return items
 

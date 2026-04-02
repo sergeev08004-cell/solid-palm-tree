@@ -51,10 +51,44 @@ TOPIC_RULES = {
         "weight": 2.6,
         "keywords": ["ev", "electric", "электро", "battery", "charging", "зарядк"]
     },
+    "gadgets": {
+        "label": "Автогаджеты",
+        "weight": 2.55,
+        "keywords": [
+            "navigator",
+            "navigation",
+            "nav",
+            "dash cam",
+            "dashcam",
+            "head unit",
+            "carplay",
+            "android auto",
+            "infotainment",
+            "видеорегистратор",
+            "навигатор",
+            "магнитол",
+            "мультимедиа",
+            "радар-детектор",
+            "зарядное устройство",
+            "зарядный коврик"
+        ]
+    },
     "technology": {
         "label": "Технологии",
         "weight": 2.3,
-        "keywords": ["software", "ai", "автопилот", "tech", "technology", "платформ", "chip"]
+        "keywords": [
+            "software",
+            "ai",
+            "автопилот",
+            "tech",
+            "technology",
+            "платформ",
+            "chip",
+            "telematics",
+            "mapping",
+            "maps",
+            "navigation software"
+        ]
     }
 }
 DEFAULT_TOPIC = ("industry", "Отрасль", 1.7)

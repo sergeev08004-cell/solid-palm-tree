@@ -9,6 +9,31 @@ from news_bot.feeds import fetch_feed
 from news_bot.storage import Storage
 from news_bot.text_tools import fingerprint_from_text, normalize_url, title_key, tokens_from_text
 
+SOURCE_REQUIRED_KEYWORDS = {
+    "garmin": (
+        "automotive",
+        "vehicle",
+        "vehicles",
+        "car",
+        "cars",
+        "truck",
+        "trucks",
+        "fleet",
+        "navigation",
+        "navigator",
+        "dash cam",
+        "dashcam",
+        "infotainment",
+        "driver",
+        "drivers",
+        "road trip",
+        "drivesmart",
+        "drivecam",
+        "dezl",
+        "rv"
+    )
+}
+
 
 @dataclass(frozen=True)
 class CollectedItem:
@@ -51,6 +76,8 @@ def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = Fals
             lowered_haystack = f"{entry.title} {entry.summary}".lower()
             if any(keyword in lowered_haystack for keyword in config.blocked_keywords):
                 continue
+            if not source_matches_required_context(entry.source_group, lowered_haystack):
+                continue
 
             tokens = tokens_from_text(f"{entry.title} {entry.summary}")
             if len(tokens) < 4:
@@ -74,3 +101,10 @@ def collect_candidates(config: AppConfig, storage: Storage, verbose: bool = Fals
             )
 
     return collected
+
+
+def source_matches_required_context(source_group: str, lowered_haystack: str) -> bool:
+    required_keywords = SOURCE_REQUIRED_KEYWORDS.get(source_group, ())
+    if not required_keywords:
+        return True
+    return any(keyword in lowered_haystack for keyword in required_keywords)

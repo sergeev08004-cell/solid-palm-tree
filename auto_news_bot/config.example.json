@@ -90,6 +90,14 @@
       "enabled": true
     },
     {
+      "name": "Garmin Newsroom",
+      "url": "https://www.garmin.com/en-US/newsroom/feed/",
+      "language": "en",
+      "group": "garmin",
+      "weight": 0.82,
+      "enabled": true
+    },
+    {
       "name": "Autocar",
       "url": "https://www.autocar.co.uk/rss",
       "language": "en",
@@ -152,6 +160,7 @@
     "prices",
     "production",
     "electric",
+    "gadgets",
     "technology",
     "sales",
     "recalls"
@@ -200,6 +209,11 @@
     "e-bike",
     "ebike",
     "aviation",
+    "fitness",
+    "watch",
+    "smartwatch",
+    "wearable",
+    "cycling",
     "aircraft",
     "boat",
     "yacht",

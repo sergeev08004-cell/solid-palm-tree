@@ -29,13 +29,14 @@ def run_cycle(storage: Storage, publisher: TelegramPublisher, dry_run: bool, ver
     config = publisher.config
     translator = Translator(config)
     candidates = collect_candidates(config, storage, verbose=verbose)
+    rank_window = max(config.max_posts_per_cycle * 4, config.max_posts_per_cycle + 5)
     ranked = rank_candidates(
         candidates,
         storage=storage,
         priority_topics=config.priority_topics,
         max_age_hours=config.max_post_age_hours,
         min_age_minutes=config.min_post_age_minutes,
-        max_items=config.max_posts_per_cycle,
+        max_items=rank_window,
         diversity=config.diversity
     )
 

@@ -45,6 +45,7 @@ TOPIC_EMOJIS = {
     "sales": "📈",
     "production": "🏭",
     "electric": "⚡",
+    "gadgets": "🧭",
     "technology": "🧠",
     "industry": "🌍"
 }
@@ -56,6 +57,7 @@ TOPIC_HASHTAGS = {
     "sales": "Рынок",
     "production": "Производство",
     "electric": "Электрокары",
+    "gadgets": "Автогаджеты",
     "technology": "Технологии",
     "industry": "Автоновости"
 }
@@ -71,6 +73,8 @@ BRAND_TAGS = (
     ("volkswagen", "Volkswagen"),
     ("toyota", "Toyota"),
     ("tesla", "Tesla"),
+    ("garmin", "Garmin"),
+    ("tomtom", "TomTom"),
     ("bmw", "BMW"),
     ("mini", "MINI"),
     ("audi", "Audi"),
@@ -118,10 +122,11 @@ SOURCE_TAGS = {
     "autoevolution": "Autoevolution",
     "bmwgroup": "BMW",
     "hyundai": "Hyundai",
+    "garmin": "Garmin",
     "drom": "Drom",
     "motorru": "MotorRu"
 }
-SPEC_FOCUS_TOPICS = {"new_models", "electric"}
+SPEC_FOCUS_TOPICS = {"new_models", "electric", "gadgets"}
 GADGET_KEYWORDS = (
     "гаджет",
     "устройств",
