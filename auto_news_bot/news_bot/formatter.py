@@ -367,6 +367,7 @@ def _format_post(
     paragraphs = build_reference_paragraphs(item, title, summary, max_paragraphs=max_bullets + 1)
     price_block = build_price_block(item, title, summary, max_lines=max_bullets)
     cta_line = build_channel_cta(channel_id)
+    tags = build_hashtags(item, title)
     lines = [f"<b>{escape_text(title)}</b>"]
 
     for paragraph in paragraphs[:max(1, max_bullets + 1)]:
@@ -383,6 +384,9 @@ def _format_post(
     if cta_line:
         lines.extend(["", cta_line])
 
+    if tags:
+        lines.extend(["", " ".join(f"#{tag}" for tag in tags[:4])])
+
     text = "\n".join(lines).strip()
     if len(text) <= max_length:
         return text
@@ -396,6 +400,8 @@ def _format_post(
             fallback_lines.extend(["", emphasize_paragraph(truncate(f"Цена: {price_lines[0]}", 110))])
     if cta_line:
         fallback_lines.extend(["", cta_line])
+    if tags:
+        fallback_lines.extend(["", " ".join(f"#{tag}" for tag in tags[:3])])
 
     return truncate("\n".join(fallback_lines).strip(), max_length)
 
